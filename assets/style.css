@@ -5,7 +5,8 @@
 
 :root {
   --umich-blue: #00274C;
-  --umich-blue-dark: #001933;
+  --umich-blue-dark: #001b36;
+  --umich-blue-matte: #00274C;
   --umich-maize: #FFCB05;
   --accent-cyan: #00b4d8;
   --accent-green: #10b981;
@@ -43,12 +44,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Header & Compact Navigation Taskbar */
+/* Header & Compact Navigation Taskbar - Solid Matte Blue */
 .header {
-  background: linear-gradient(135deg, var(--umich-blue-dark) 0%, var(--umich-blue) 100%);
+  background-color: var(--umich-blue-matte);
   color: #ffffff;
   padding: 0.6rem 1.5rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -256,8 +257,9 @@ body {
   border-color: var(--umich-blue);
 }
 
+/* Solid Matte Blue Submit Button */
 .btn-submit {
-  background: linear-gradient(135deg, var(--umich-blue) 0%, var(--umich-blue-dark) 100%);
+  background-color: var(--umich-blue-matte);
   color: #ffffff;
   font-weight: bold;
   font-size: 0.9rem;
@@ -274,7 +276,7 @@ body {
 }
 
 .btn-submit:hover {
-  background: var(--umich-blue-dark);
+  background-color: var(--umich-blue-dark);
   box-shadow: var(--shadow-sm);
 }
 
@@ -438,17 +440,17 @@ body {
   display: block;
 }
 
-/* Top Battery Gauge Widget — Increased height to 300px per user request */
+/* Top Battery Gauge Widget — Height set to 500px */
 .widget-iframe {
-  height: 300px !important;
+  height: 500px !important;
   max-width: 450px;
   margin: 0 auto;
   display: block;
 }
 
-/* Soil Moisture Operating Manual Section */
+/* Soil Moisture Operating Manual Section — Solid Matte Blue */
 .manual-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background-color: var(--umich-blue-matte);
   color: #ffffff;
   border-radius: var(--radius-md);
   padding: 1.5rem;
@@ -457,7 +459,7 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 1.25rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 1.25rem;
 }
 
@@ -474,7 +476,7 @@ body {
 }
 
 .btn-manual-primary {
-  background: var(--umich-maize);
+  background-color: var(--umich-maize);
   color: var(--umich-blue-dark);
   font-weight: bold;
   padding: 0.65rem 1.25rem;
@@ -487,14 +489,14 @@ body {
 }
 
 .btn-manual-primary:hover {
-  background: #e6b800;
+  background-color: #e6b800;
   transform: translateY(-1px);
 }
 
 .btn-manual-secondary {
   background: transparent;
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   font-weight: bold;
   padding: 0.65rem 1.25rem;
   border-radius: var(--radius-sm);
@@ -506,13 +508,13 @@ body {
 }
 
 .btn-manual-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   border-color: #ffffff;
 }
 
-/* Footer */
+/* Footer — Solid Matte Blue */
 .footer {
-  background: var(--umich-blue-dark);
+  background-color: var(--umich-blue-dark);
   color: #94a3b8;
   padding: 1.5rem;
   text-align: center;
