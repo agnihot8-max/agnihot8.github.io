@@ -440,9 +440,9 @@ body {
   display: block;
 }
 
-/* Top Battery Gauge Widget — Height set to 500px */
+/* Top Battery Gauge Widget — Height set to 360px per user request */
 .widget-iframe {
-  height: 500px !important;
+  height: 360px !important;
   max-width: 450px;
   margin: 0 auto;
   display: block;
