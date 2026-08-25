@@ -438,9 +438,9 @@ body {
   display: block;
 }
 
-/* Top Battery Gauge Widget — Increased height to 260px so bottom is never cut off */
+/* Top Battery Gauge Widget — Increased height to 300px per user request */
 .widget-iframe {
-  height: 260px !important;
+  height: 300px !important;
   max-width: 450px;
   margin: 0 auto;
   display: block;
