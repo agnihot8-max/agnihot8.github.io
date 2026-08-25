@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LGRx Soil Moisture Network — Live field node telemetry, MATLAB visualizations, and CSV data download tool.">
+    <title>LGRx Soil Moisture Network Dashboard</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <script src="assets/main.js" defer></script>
+    <script src="assets/download.js" defer></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-container">
+            <div class="branding">
+                <a href="index.html">
+                    <img src="assets/images/UMichBlock.svg" alt="University of Michigan Logo">
+                </a>
+                <div class="branding-text">
+                    <h1>LGRx Soil Moisture Network <span class="badge-lgrx">LGRx</span></h1>
+                    <p>University of Michigan | Space Physics Research Lab</p>
+                </div>
+            </div>
+            <nav class="nav-links" aria-label="Main navigation">
+                <a href="#dashboard-overview">Overview</a>
+                <a href="#data-download">Download Data</a>
+                <a href="#all-nodes">All Nodes</a>
+                <a href="manual.html" class="btn-highlight">Soil Moisture Operating Manual</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+
+        <!-- KPI Network Summary Banner -->
+        <section id="dashboard-overview" class="kpi-banner">
+            <div class="kpi-card">
+                <div class="kpi-icon">📡</div>
+                <div class="kpi-details">
+                    <span>Field Network</span>
+                    <h3><span class="pulse-dot"></span>4 Nodes Online</h3>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-details">
+                    <span>Data Telemetry</span>
+                    <h3>ThingSpeak Streams</h3>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">📖</div>
+                <div class="kpi-details">
+                    <span>Documentation</span>
+                    <h3>Operating Manual</h3>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">⏱️</div>
+                <div class="kpi-details">
+                    <span>Update Interval</span>
+                    <h3>Every 5 Minutes</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Download Section -->
+        <section id="data-download" class="section-card">
+            <div class="section-header">
+                <h2>📥 Download Field Node Data (CSV)</h2>
+                <div class="preset-buttons">
+                    <button type="button" class="btn-preset" id="preset-24h">Last 24 Hours</button>
+                    <button type="button" class="btn-preset" id="preset-7d">Last 7 Days</button>
+                    <button type="button" class="btn-preset" id="preset-30d">Last 30 Days</button>
+                </div>
+            </div>
+            
+            <form id="download-form">
+                <div class="download-grid">
+                    <div class="form-group">
+                        <label for="node-select">Field Node Selection:</label>
+                        <select id="node-select">
+                            <option value="all">All Nodes (Combined CSV)</option>
+                            <option value="1">Node 1 (Channel 2996904)</option>
+                            <option value="2">Node 2 (Channel 2996908)</option>
+                            <option value="3">Node 3 (Channel 2996910)</option>
+                            <option value="4">Node 4 (Channel 2996911)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timezone-select">Timezone Standard:</label>
+                        <select id="timezone-select">
+                            <option value="local">Local Timezone</option>
+                            <option value="UTC">UTC (Universal Time)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="start">Start Date & Time:</label>
+                        <input type="datetime-local" id="start" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="end">End Date & Time:</label>
+                        <input type="datetime-local" id="end" required>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn-submit">
+                            <span>Download CSV</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <div id="download-status" class="download-status"></div>
+
+            <p class="download-note">
+                <strong>Note:</strong> Timezone selection determines how start/end filter inputs are interpreted. Downloaded CSV timestamps use standard UTC timestamps for scientific consistency across all nodes.
+            </p>
+        </section>
+
+        <!-- Network Overview Plots -->
+        <section id="network-plots" class="section-card">
+            <div class="section-header">
+                <h2>🌐 Network-Wide Overview & MATLAB Visualizations</h2>
+                <span class="node-status-badge"><span class="pulse-dot"></span>Auto-Refreshing</span>
+            </div>
+            <div class="plot-row">
+                <iframe
+                    id="moisturePlot"
+                    title="Volumetric Soil Moisture Network Overview"
+                    src="https://thingspeak.mathworks.com/apps/matlab_visualizations/631513"
+                    loading="lazy">
+                </iframe>
+
+                <iframe
+                    id="tempPlot"
+                    title="Ground Temperature Network Overview"
+                    src="https://thingspeak.mathworks.com/apps/matlab_visualizations/631516"
+                    loading="lazy">
+                </iframe>
+            </div>
+        </section>
+
+        <!-- ALL 4 FIELD NODES ON 1 SINGLE PAGE -->
+        <section id="all-nodes" class="all-nodes-container">
+            <div class="section-header" style="background: var(--bg-card); padding: 1rem 1.5rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border-color);">
+                <h2>📡 Field Telemetry — All 4 Nodes</h2>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Real-time metrics, soil moisture raw counts, temperature, battery health, RSSI, and SNR streams across all deployed field units.</p>
+            </div>
+
+            <div class="nodes-grid-4col">
+                <!-- NODE 1 -->
+                <div class="node-card">
+                    <div class="node-header">
+                        <h3><a href="https://thingspeak.mathworks.com/channels/2996904" target="_blank" rel="noopener noreferrer">Node 1</a></h3>
+                        <span class="node-status-badge"><span class="pulse-dot"></span>Active</span>
+                    </div>
+                    <div class="iframe-container">
+                        <iframe class="widget-iframe" src="https://thingspeak.mathworks.com/channels/2996904/widgets/1096794" title="Node 1 Status Widget"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996904/charts/2?bgcolor=%23ffffff&color=%2300274C&days=10&dynamic=true&title=Raw+Soil+Moisture&type=line&xaxis=Date&yaxis=Soil+Moisture+%28Raw%29" title="Node 1 Raw Soil Moisture"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996904/charts/3?bgcolor=%23ffffff&color=%2300b4d8&days=10&dynamic=true&title=Temperature&type=line&xaxis=Date&yaxis=Temperature+%28C%29" title="Node 1 Temperature"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996904/charts/4?average=240&bgcolor=%23ffffff&color=%23FFCB05&days=10&dynamic=true&title=Battery+Voltage&type=line&xaxis=Date&yaxis=Volts" title="Node 1 Battery Voltage"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996904/charts/5?bgcolor=%23ffffff&color=%2310b981&days=2&dynamic=true&results=60&title=Received+Signal+Strength&type=line&xaxis=Date&yaxis=dBm" title="Node 1 RSSI"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996904/charts/6?bgcolor=%23ffffff&color=%238b5cf6&days=2&dynamic=true&results=60&title=Signal-to-Noise+Ratio&type=line&xaxis=Date&yaxis=dB" title="Node 1 SNR"></iframe>
+                    </div>
+                </div>
+
+                <!-- NODE 2 -->
+                <div class="node-card">
+                    <div class="node-header">
+                        <h3><a href="https://thingspeak.mathworks.com/channels/2996908" target="_blank" rel="noopener noreferrer">Node 2</a></h3>
+                        <span class="node-status-badge"><span class="pulse-dot"></span>Active</span>
+                    </div>
+                    <div class="iframe-container">
+                        <iframe class="widget-iframe" src="https://thingspeak.mathworks.com/channels/2996908/widgets/1096799" title="Node 2 Status Widget"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996908/charts/2?bgcolor=%23ffffff&color=%2300274C&days=10&dynamic=true&title=Raw+Soil+Moisture&type=line&xaxis=Date&yaxis=Soil+Moisture+%28Raw%29" title="Node 2 Raw Soil Moisture"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996908/charts/3?bgcolor=%23ffffff&color=%2300b4d8&days=10&dynamic=true&title=Temperature&type=line&xaxis=Date&yaxis=Temperature+%28C%29" title="Node 2 Temperature"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996908/charts/4?average=240&bgcolor=%23ffffff&color=%23FFCB05&days=10&dynamic=true&title=Battery+Voltage&type=line&xaxis=Date&yaxis=Volts" title="Node 2 Battery Voltage"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996908/charts/5?bgcolor=%23ffffff&color=%2310b981&days=2&dynamic=true&results=60&title=Received+Signal+Strength&type=line&xaxis=Date&yaxis=dBm" title="Node 2 RSSI"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996908/charts/6?bgcolor=%23ffffff&color=%238b5cf6&days=2&dynamic=true&results=60&title=Signal-to-Noise+Ratio&type=line&xaxis=Date&yaxis=dB" title="Node 2 SNR"></iframe>
+                    </div>
+                </div>
+
+                <!-- NODE 3 -->
+                <div class="node-card">
+                    <div class="node-header">
+                        <h3><a href="https://thingspeak.mathworks.com/channels/2996910" target="_blank" rel="noopener noreferrer">Node 3</a></h3>
+                        <span class="node-status-badge"><span class="pulse-dot"></span>Active</span>
+                    </div>
+                    <div class="iframe-container">
+                        <iframe class="widget-iframe" src="https://thingspeak.mathworks.com/channels/2996910/widgets/1096813" title="Node 3 Status Widget"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996910/charts/2?bgcolor=%23ffffff&color=%2300274C&days=10&dynamic=true&title=Raw+Soil+Moisture&type=line&xaxis=Date&yaxis=Soil+Moisture+%28Raw%29" title="Node 3 Raw Soil Moisture"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996910/charts/3?bgcolor=%23ffffff&color=%2300b4d8&days=10&dynamic=true&title=Temperature&type=line&xaxis=Date&yaxis=Temperature+%28C%29" title="Node 3 Temperature"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996910/charts/4?average=240&bgcolor=%23ffffff&color=%23FFCB05&days=10&dynamic=true&title=Battery+Voltage&type=line&xaxis=Date&yaxis=Volts" title="Node 3 Battery Voltage"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996910/charts/5?bgcolor=%23ffffff&color=%2310b981&days=2&dynamic=true&results=60&title=Received+Signal+Strength&type=line&xaxis=Date&yaxis=dBm" title="Node 3 RSSI"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996910/charts/6?bgcolor=%23ffffff&color=%238b5cf6&days=2&dynamic=true&results=60&title=Signal-to-Noise+Ratio&type=line&xaxis=Date&yaxis=dB" title="Node 3 SNR"></iframe>
+                    </div>
+                </div>
+
+                <!-- NODE 4 -->
+                <div class="node-card">
+                    <div class="node-header">
+                        <h3><a href="https://thingspeak.mathworks.com/channels/2996911" target="_blank" rel="noopener noreferrer">Node 4</a></h3>
+                        <span class="node-status-badge"><span class="pulse-dot"></span>Active</span>
+                    </div>
+                    <div class="iframe-container">
+                        <iframe class="widget-iframe" src="https://thingspeak.mathworks.com/channels/2996911/widgets/1096815" title="Node 4 Status Widget"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996911/charts/2?bgcolor=%23ffffff&color=%2300274C&days=10&dynamic=true&title=Raw+Soil+Moisture&type=line&xaxis=Date&yaxis=Soil+Moisture+%28Raw%29" title="Node 4 Raw Soil Moisture"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996911/charts/3?bgcolor=%23ffffff&color=%2300b4d8&days=10&dynamic=true&title=Temperature&type=line&xaxis=Date&yaxis=Temperature+%28C%29" title="Node 4 Temperature"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996911/charts/4?average=240&bgcolor=%23ffffff&color=%23FFCB05&days=10&dynamic=true&title=Battery+Voltage&type=line&xaxis=Date&yaxis=Volts" title="Node 4 Battery Voltage"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996911/charts/5?bgcolor=%23ffffff&color=%2310b981&days=2&dynamic=true&results=60&title=Received+Signal+Strength&type=line&xaxis=Date&yaxis=dBm" title="Node 4 RSSI"></iframe>
+                        <iframe src="https://thingspeak.mathworks.com/channels/2996911/charts/6?bgcolor=%23ffffff&color=%238b5cf6&days=2&dynamic=true&results=60&title=Signal-to-Noise+Ratio&type=line&xaxis=Date&yaxis=dB" title="Node 4 SNR"></iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Soil Moisture Operating Manual Banner Section -->
+        <section id="operating-manual" class="manual-banner">
+            <div class="manual-content">
+                <h2>📖 Soil Moisture Operating Manual</h2>
+                <p>Access complete technical documentation for node deployment, sensor calibration, solar power setup, LoRa/ThingSpeak channel mapping, and field operations.</p>
+            </div>
+            <div class="manual-actions">
+                <a href="manual.html" class="btn-manual-primary">View Operating Manual</a>
+                <a href="assets/manual.pdf" download class="btn-manual-secondary">Download PDF</a>
+            </div>
+        </section>
+
+    </div>
+
+    <footer class="footer">
+        <p><strong>LGRx Soil Moisture Network</strong> • University of Michigan Space Physics Research Laboratory</p>
+    </footer>
+</body>
+</html>
