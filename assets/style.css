@@ -1,9 +1,7 @@
 ﻿/* ==========================================================================
    LGRx Soil Moisture Network — Custom Design System
-   University of Michigan | NASA CYGNSS Ground Validation Network
+   University of Michigan | Space Physics Research Laboratory
    ========================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
 
 :root {
   --umich-blue: #00274C;
@@ -30,7 +28,7 @@
   --radius-lg: 16px;
 }
 
-/* Base Styles */
+/* Base Styles - Using Arial font */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -38,7 +36,7 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
@@ -73,19 +71,18 @@ body {
 }
 
 .branding img {
-  height: 48px;
+  height: 52px;
   width: auto;
-  border-radius: var(--radius-sm);
-  background-color: rgba(255, 255, 255, 0.1);
-  padding: 4px;
+  object-fit: contain;
+  display: block;
 }
 
 .branding-text h1 {
-  font-family: 'Outfit', sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: bold;
   color: #ffffff;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -97,13 +94,13 @@ body {
   font-size: 0.85rem;
   padding: 0.15rem 0.6rem;
   border-radius: 20px;
-  font-weight: 800;
+  font-weight: bold;
   text-transform: uppercase;
 }
 
 .branding-text p {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .nav-links {
@@ -114,22 +111,23 @@ body {
 
 .nav-links a, .nav-links button {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: bold;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .nav-links a:hover, .nav-links button:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   border-color: var(--umich-maize);
   color: var(--umich-maize);
 }
@@ -137,7 +135,7 @@ body {
 .nav-links .btn-highlight {
   background: var(--umich-maize);
   color: var(--umich-blue-dark);
-  font-weight: 700;
+  font-weight: bold;
   border-color: var(--umich-maize);
 }
 
@@ -151,54 +149,6 @@ body {
   max-width: 1800px;
   margin: 0 auto;
   padding: 1.5rem;
-}
-
-/* Hero / KPI Banner */
-.kpi-banner {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.kpi-card {
-  background: var(--bg-card);
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.kpi-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: rgba(0, 39, 76, 0.08);
-  color: var(--umich-blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  font-weight: bold;
-}
-
-.kpi-details span {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-}
-
-.kpi-details h3 {
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1.2;
 }
 
 .pulse-dot {
@@ -238,9 +188,9 @@ body {
 }
 
 .section-header h2 {
-  font-family: 'Outfit', sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: bold;
   color: var(--umich-blue);
   display: flex;
   align-items: center;
@@ -263,8 +213,9 @@ body {
 
 .form-group label {
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: bold;
   color: var(--text-main);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .form-group select, .form-group input {
@@ -275,6 +226,7 @@ body {
   background-color: #fff;
   color: var(--text-main);
   transition: border-color 0.2s ease;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .form-group select:focus, .form-group input:focus {
@@ -295,10 +247,11 @@ body {
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: bold;
   cursor: pointer;
   color: var(--text-muted);
   transition: all 0.2s ease;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .btn-preset:hover {
@@ -310,7 +263,7 @@ body {
 .btn-submit {
   background: linear-gradient(135deg, var(--umich-blue) 0%, var(--umich-blue-dark) 100%);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: bold;
   font-size: 0.95rem;
   padding: 0.65rem 1.5rem;
   border: none;
@@ -322,6 +275,7 @@ body {
   justify-content: center;
   gap: 0.5rem;
   height: 42px;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .btn-submit:hover {
@@ -343,7 +297,7 @@ body {
   padding: 0.75rem;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: bold;
   display: none;
 }
 
@@ -432,9 +386,9 @@ body {
 }
 
 .node-header h3 {
-  font-family: 'Outfit', sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 1.2rem;
-  font-weight: 700;
+  font-weight: bold;
   color: var(--umich-blue);
 }
 
@@ -452,7 +406,7 @@ body {
   background-color: #dcfce7;
   color: #166534;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: bold;
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
   display: flex;
@@ -494,9 +448,9 @@ body {
 }
 
 .manual-content h2 {
-  font-family: 'Outfit', sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: bold;
   color: var(--umich-maize);
   margin-bottom: 0.5rem;
 }
@@ -515,7 +469,7 @@ body {
 .btn-manual-primary {
   background: var(--umich-maize);
   color: var(--umich-blue-dark);
-  font-weight: 700;
+  font-weight: bold;
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-sm);
   text-decoration: none;
@@ -523,6 +477,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .btn-manual-primary:hover {
@@ -534,7 +489,7 @@ body {
   background: transparent;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  font-weight: 600;
+  font-weight: bold;
   padding: 0.75rem 1.25rem;
   border-radius: var(--radius-sm);
   text-decoration: none;
@@ -542,6 +497,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .btn-manual-secondary:hover {
@@ -557,6 +513,7 @@ body {
   text-align: center;
   font-size: 0.85rem;
   border-top: 3px solid var(--umich-maize);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .footer a {
