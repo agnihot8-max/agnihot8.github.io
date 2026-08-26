@@ -44,14 +44,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Header & Compact Navigation Taskbar - Solid Matte Blue */
+/* Header & Navigation Taskbar — Scrolls away with the page (position: relative) */
 .header {
   background-color: var(--umich-blue-matte);
   color: #ffffff;
   padding: 0.6rem 1.5rem;
   box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 100;
 }
 
@@ -440,8 +439,9 @@ body {
   display: block;
 }
 
+/* Top Battery Gauge Widget — Height set to 245px */
 .widget-iframe {
-  height: 270px !important;
+  height: 245px !important;
   max-width: 450px;
   margin: 0 auto;
   display: block;
