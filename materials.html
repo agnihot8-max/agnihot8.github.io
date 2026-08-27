@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Field Node Materials List — LGRx.">
+    <title>Field Node Materials List | LGRx</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        .manual-viewer-card {
+            background: #ffffff;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            max-width: 1400px;
+            margin: 0 auto 1.5rem auto;
+        }
+        .manual-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 3px solid var(--umich-maize);
+            padding-bottom: 0.65rem;
+        }
+        .manual-header-row h1 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 1.6rem;
+            color: var(--umich-blue);
+        }
+        .pdf-frame {
+            width: 100%;
+            height: 85vh;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: #f1f5f9;
+        }
+        .local-warning {
+            background: #fffbeb;
+            color: #b45309;
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid #fde68a;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-container">
+            <div class="branding">
+                <a href="index.html">
+                    <img src="assets/images/Block_M-Hex.png" alt="University of Michigan Block M Logo">
+                </a>
+                <div class="branding-text">
+                    <h1>LGRx Soil Moisture Network <span class="badge-lgrx">LGRx</span></h1>
+                    <p>University of Michigan</p>
+                </div>
+            </div>
+            <nav class="nav-links">
+                <a href="index.html">Back to Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+        <div class="manual-viewer-card">
+            <div class="manual-header-row">
+                <div>
+                    <h1>Field Node Materials List</h1>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <a href="https://view.officeapps.live.com/op/view.aspx?src=https://agnihot8-max.github.io/assets/field-node-materials.xlsx" target="_blank" class="btn-manual-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">Open in Full Screen</a>
+                    <a href="assets/field-node-materials.xlsx" download class="btn-manual-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem; color: var(--umich-blue); border-color: var(--umich-blue);">Download Excel File</a>
+                </div>
+            </div>
+
+            <div class="local-warning" id="localWarning" style="display: none;">
+                ⚠️ Note: The interactive Excel viewer requires a public URL. It will load correctly once you push to GitHub Pages! (If you are viewing this locally, click the Download button above instead).
+            </div>
+
+            <!-- Embedded Interactive Excel Viewer using MS Office Live -->
+            <iframe class="pdf-frame" src="https://view.officeapps.live.com/op/embed.aspx?src=https://agnihot8-max.github.io/assets/field-node-materials.xlsx" title="Field Node Materials List">
+                <p>Your browser does not support inline viewing. Please <a href="assets/field-node-materials.xlsx">click here to download the Materials List</a>.</p>
+            </iframe>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p><strong>LGRx Soil Moisture Network</strong> • University of Michigan</p>
+    </footer>
+
+    <script>
+        // Show warning if running locally (not on github.io)
+        if (window.location.hostname !== "agnihot8-max.github.io") {
+            document.getElementById('localWarning').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
