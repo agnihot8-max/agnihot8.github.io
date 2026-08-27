@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    LGRx Soil Moisture Network — Custom Design System
    University of Michigan
    ========================================================================== */
@@ -142,6 +142,53 @@ body {
 .nav-links .btn-highlight:hover {
   background: #e6b800;
   color: var(--umich-blue-dark);
+}
+
+/* Dropdown Menu Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: var(--bg-card);
+  min-width: 250px;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-sm);
+  z-index: 200;
+  border: 1px solid var(--border-color);
+  margin-top: 0.25rem;
+  overflow: hidden;
+}
+
+.nav-links .dropdown-content a {
+  color: var(--text-main);
+  background: transparent;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  display: block;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  font-weight: normal;
+  border-radius: 0;
+}
+
+.nav-links .dropdown-content a:last-child {
+  border-bottom: none;
+}
+
+.nav-links .dropdown-content a:hover {
+  background-color: var(--bg-main);
+  color: var(--umich-blue);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nav-links .dropdown:hover .dropdown-content,
+.nav-links .dropdown:focus-within .dropdown-content {
+  display: block;
 }
 
 /* Page Layout */
