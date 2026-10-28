@@ -1,467 +1,743 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HydraGO Field Map — LGRx</title>
-  <link rel="stylesheet" href="assets/style.css?v=20260827_v2" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HydraGO Field Hydration Map — Upload a CSV and visualize spatial soil moisture across the field.">
+    <title>HydraGO Field Map | LGRx</title>
+    <link rel="stylesheet" href="assets/style.css?v=20260827_v2">
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Map CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Papa Parse (CSV parser) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <!-- Papa Parse for robust CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        /* Dropzone styling adhering to LGRx design system */
+        .upload-dropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 2rem 1.5rem;
+            text-align: center;
+            background: #fafbfc;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .upload-dropzone:hover,
+        .upload-dropzone.dragover {
+            border-color: var(--umich-blue);
+            background: #f0f7ff;
+        }
+        .upload-dropzone input[type="file"] {
+            display: none;
+        }
+        .dropzone-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--umich-blue);
+            margin-bottom: 0.35rem;
+        }
+        .dropzone-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+        .dropzone-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .selected-file-name {
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
 
-  <style>
-    /* ── Page Layout ─────────────────────────────────────────── */
-    body { margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; background: #0a0f1e; color: #e8eaf6; }
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.85rem 1rem;
+            text-align: center;
+        }
+        .stat-card .stat-label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+        .stat-card .stat-value {
+            font-size: 1.35rem;
+            font-weight: bold;
+            color: var(--umich-blue);
+        }
 
-    .hydrago-hero {
-      padding: 40px 32px 28px;
-      background: linear-gradient(135deg, #0d1b2a 0%, #1a2a1a 100%);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-    .hydrago-hero h1 {
-      margin: 0 0 4px;
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #a5d6a7;
-    }
-    .hydrago-hero p {
-      margin: 0;
-      font-size: 0.9rem;
-      color: #90a4ae;
-    }
-    .upload-zone {
-      flex: 1 1 320px;
-      min-width: 280px;
-      border: 2px dashed rgba(165,214,167,0.45);
-      border-radius: 14px;
-      padding: 22px 28px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-      background: rgba(165,214,167,0.04);
-    }
-    .upload-zone:hover, .upload-zone.dragover {
-      border-color: #a5d6a7;
-      background: rgba(165,214,167,0.10);
-    }
-    .upload-zone input { display: none; }
-    .upload-zone label {
-      cursor: pointer;
-      display: block;
-      font-size: 0.92rem;
-      color: #b2dfdb;
-    }
-    .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 6px; }
-    .upload-zone .file-name {
-      margin-top: 8px;
-      font-size: 0.82rem;
-      color: #78909c;
-    }
+        /* Map styling */
+        #map-container {
+            width: 100%;
+            height: 680px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            position: relative;
+            background: #e5e7eb;
+        }
+        .map-placeholder {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+            text-align: center;
+            color: var(--text-muted);
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 2rem;
+        }
+        .map-placeholder p {
+            margin: 0.35rem 0;
+            font-size: 0.95rem;
+        }
 
-    /* ── Status bar ──────────────────────────────────────────── */
-    #status-bar {
-      display: none;
-      background: rgba(10,15,30,0.95);
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      padding: 10px 32px;
-      font-size: 0.85rem;
-      color: #90caf9;
-    }
+        /* Custom Leaflet Floating Legend */
+        .map-legend {
+            position: absolute;
+            bottom: 24px;
+            right: 16px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(4px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            box-shadow: var(--shadow-md);
+            font-family: Arial, Helvetica, sans-serif;
+            min-width: 170px;
+        }
+        .legend-title {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 0.4rem;
+        }
+        .legend-bar {
+            height: 12px;
+            border-radius: 4px;
+            background: linear-gradient(to right, #d73027, #fc8d59, #fee090, #91bfdb, #4575b4);
+            margin-bottom: 0.3rem;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
 
-    /* ── Map container ───────────────────────────────────────── */
-    #map-wrap {
-      display: none;
-      position: relative;
-    }
-    #hydra-map {
-      width: 100%;
-      height: calc(100vh - 220px);
-      min-height: 480px;
-      background: #0a0f1e;
-    }
-
-    /* ── Stats panel (inside map) ────────────────────────────── */
-    #stats-panel {
-      position: absolute;
-      bottom: 30px;
-      left: 15px;
-      z-index: 1000;
-      background: rgba(10,15,30,0.88);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 14px;
-      padding: 14px 18px;
-      color: #e8eaf6;
-      font-size: 13px;
-      min-width: 210px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
-      pointer-events: none;
-    }
-    #stats-panel h4 { margin: 0 0 8px; font-size: 15px; font-weight: 700; letter-spacing: .3px; }
-    #stats-panel table { border-collapse: collapse; width: 100%; }
-    #stats-panel td:first-child { color: #90caf9; padding-right: 16px; }
-    #stats-panel td:last-child { text-align: right; font-weight: 600; }
-    #stats-panel .ts { margin-top: 8px; font-size: 11px; color: #78909c; }
-
-    /* ── Legend ─────────────────────────────────────────────── */
-    #moisture-legend {
-      position: absolute;
-      bottom: 30px;
-      right: 15px;
-      z-index: 1000;
-      background: rgba(10,15,30,0.88);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 14px;
-      padding: 12px 16px;
-      color: #e8eaf6;
-      font-size: 12px;
-      min-width: 160px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
-      pointer-events: none;
-    }
-    #moisture-legend h5 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
-    .legend-bar {
-      height: 14px;
-      border-radius: 6px;
-      background: linear-gradient(to right, #d73027, #fc8d59, #fee090, #91bfdb, #4575b4);
-      margin-bottom: 4px;
-    }
-    .legend-labels { display: flex; justify-content: space-between; font-size: 11px; color: #90a4ae; }
-
-    /* ── Empty / error states ────────────────────────────────── */
-    #empty-state {
-      text-align: center;
-      padding: 80px 32px;
-      color: #546e7a;
-    }
-    #empty-state .big-icon { font-size: 3.5rem; margin-bottom: 16px; }
-    #empty-state h2 { margin: 0 0 8px; font-size: 1.2rem; color: #78909c; }
-    #empty-state p { margin: 0; font-size: 0.9rem; }
-  </style>
+        /* Custom marker popup styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+        }
+        .marker-popup {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            min-width: 180px;
+        }
+        .marker-popup h4 {
+            margin: 0 0 0.35rem 0;
+            font-size: 0.95rem;
+            color: var(--umich-blue);
+            border-bottom: 2px solid var(--umich-maize);
+            padding-bottom: 0.25rem;
+        }
+        .marker-popup table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.25rem;
+        }
+        .marker-popup td {
+            padding: 0.15rem 0;
+            font-size: 0.8rem;
+        }
+        .marker-popup td:last-child {
+            text-align: right;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-
-<!-- ── Header (same as main site) ────────────────────────────────────────── -->
-<header class="site-header">
-  <div class="header-inner">
-    <a href="index.html">
-      <img src="Block_M-Hex.png" alt="University of Michigan Block M" class="header-logo" />
-    </a>
-    <nav class="nav-links" aria-label="Main navigation">
-      <a href="index.html" class="nav-tab">Live Dashboard</a>
-      <div class="dropdown">
-        <button class="btn-highlight" aria-haspopup="true">Documentation &amp; Resources ▾</button>
-        <div class="dropdown-content">
-          <a href="manual.html">View Operating Manual</a>
-          <a href="materials.html">View Field Node Materials</a>
+    <header class="header">
+        <div class="header-container">
+            <div class="branding">
+                <a href="index.html">
+                    <img src="assets/images/Block_M-Hex.png" alt="University of Michigan Block M Logo" style="height: 38px; width: auto;">
+                </a>
+                <div class="branding-text">
+                    <h1>LGRx Soil Moisture Network <span class="badge-lgrx">LGRx</span></h1>
+                    <p>University of Michigan</p>
+                </div>
+            </div>
+            <nav class="nav-links" aria-label="Main navigation">
+                <a href="index.html">Live Dashboard</a>
+                <div class="dropdown">
+                    <button class="btn-highlight" aria-haspopup="true">Documentation & Resources ▾</button>
+                    <div class="dropdown-content">
+                        <a href="manual.html">View Operating Manual</a>
+                        <a href="materials.html">View Field Node Materials</a>
+                    </div>
+                </div>
+                <a href="hydrago.html" class="btn-highlight">HydraGO Map</a>
+            </nav>
         </div>
-      </div>
-      <a href="hydrago.html" class="nav-tab active-tab">HydraGO Map</a>
-    </nav>
-  </div>
-</header>
+    </header>
 
-<!-- ── Hero / Upload ──────────────────────────────────────────────────────── -->
-<div class="hydrago-hero">
-  <div>
-    <h1>🌱 HydraGO Field Hydration Map</h1>
-    <p>Upload a HydraGO CSV export to generate an interactive soil moisture map.</p>
-  </div>
-  <div class="upload-zone" id="drop-zone">
-    <div class="upload-icon">📂</div>
-    <input type="file" id="csv-input" accept=".csv" />
-    <label for="csv-input">
-      <strong>Choose CSV file</strong> or drag &amp; drop here
-    </label>
-    <div class="file-name" id="file-name-label">No file selected</div>
-  </div>
-</div>
+    <div class="main-wrapper">
 
-<!-- ── Status bar ─────────────────────────────────────────────────────────── -->
-<div id="status-bar">⏳ Processing…</div>
+        <!-- Upload Section -->
+        <section id="upload-section" class="section-card">
+            <div class="section-header">
+                <h2>HydraGO Field Data Upload</h2>
+                <div class="preset-buttons">
+                    <button type="button" class="btn-preset" id="btn-sample-data">Load Sample Data</button>
+                    <button type="button" class="btn-preset" id="btn-clear-data">Reset</button>
+                </div>
+            </div>
 
-<!-- ── Empty state ────────────────────────────────────────────────────────── -->
-<div id="empty-state">
-  <div class="big-icon">🗺️</div>
-  <h2>No data loaded yet</h2>
-  <p>Select a HydraGO CSV file above to visualize soil moisture across the field.</p>
-</div>
+            <div class="upload-dropzone" id="drop-zone">
+                <input type="file" id="csv-file-input" accept=".csv">
+                <div class="dropzone-title">Upload Stevens HydraGO CSV File</div>
+                <div class="dropzone-sub">Drag and drop your file here, or click to choose from your computer</div>
+                <div class="dropzone-actions">
+                    <button type="button" class="btn-submit" id="btn-browse-trigger">Select CSV File</button>
+                </div>
+                <div class="selected-file-name" id="file-name-display">No file currently loaded</div>
+            </div>
 
-<!-- ── Map + overlays ─────────────────────────────────────────────────────── -->
-<div id="map-wrap">
-  <div id="hydra-map"></div>
-  <div id="stats-panel">
-    <h4>🌱 Field Statistics</h4>
-    <table id="stats-table"></table>
-    <div class="ts" id="stats-ts"></div>
-  </div>
-  <div id="moisture-legend">
-    <h5>Soil Moisture (%)</h5>
-    <div class="legend-bar"></div>
-    <div class="legend-labels">
-      <span id="leg-min">–</span>
-      <span id="leg-max">–</span>
+            <div id="upload-status" class="download-status"></div>
+
+            <p class="download-note">
+                <strong>Data Processing:</strong> Files are parsed locally inside your browser session. Expected CSV headers include <code>Latitude</code>, <code>Longitude</code>, <code>Soil Moisture (%)</code>, <code>Soil Temperature (C)</code>, and <code>Bulk EC(TC) (dS/m)</code>.
+            </p>
+        </section>
+
+        <!-- Visualization Section -->
+        <section id="map-section" class="section-card">
+            <div class="section-header">
+                <h2>Spatial Soil Moisture Interpolation Map</h2>
+                <span class="node-status-badge" id="map-status-badge"><span class="pulse-dot"></span>Interactive Viewer</span>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-grid" id="stats-grid" style="display: none;">
+                <div class="stat-card">
+                    <span class="stat-label">Average Moisture</span>
+                    <span class="stat-value" id="stat-avg-moist">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Moisture Range</span>
+                    <span class="stat-value" id="stat-range-moist">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Average Soil Temp</span>
+                    <span class="stat-value" id="stat-avg-temp">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Average Bulk EC</span>
+                    <span class="stat-value" id="stat-avg-ec">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Sample Locations</span>
+                    <span class="stat-value" id="stat-locations">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total Readings</span>
+                    <span class="stat-value" id="stat-readings">--</span>
+                </div>
+            </div>
+
+            <!-- Empty Placeholder -->
+            <div id="map-empty-placeholder" class="map-placeholder">
+                <p><strong>No Field Data Rendered</strong></p>
+                <p>Upload a HydraGO CSV export above, or click <em>Load Sample Data</em> to inspect the spatial map.</p>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div id="map-wrapper" style="display: none; position: relative;">
+                <div id="map-container"></div>
+                <div id="moisture-legend" class="map-legend">
+                    <div class="legend-title">Soil Moisture (%)</div>
+                    <div class="legend-bar"></div>
+                    <div class="legend-labels">
+                        <span id="leg-min">--</span>
+                        <span id="leg-mid">--</span>
+                        <span id="leg-max">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documentation Banner -->
+        <section id="operating-manual" class="manual-banner">
+            <div class="manual-content">
+                <div class="manual-text">
+                    <h3>Field Documentation & Technical Manual</h3>
+                    <p>Access assembly specifications, antenna tuning procedures, and complete calibration records.</p>
+                </div>
+                <div class="manual-actions">
+                    <a href="manual.html" class="btn-manual-primary">View Operating Manual</a>
+                    <a href="materials.html" class="btn-manual-secondary">View Materials List</a>
+                </div>
+            </div>
+        </section>
+
     </div>
-  </div>
-</div>
 
-<script>
-// ── Colour ramp (matches Python) ──────────────────────────────────────────
-const RAMP = [
-  [0.00, [215, 48,  39]],
-  [0.25, [252,141,  89]],
-  [0.50, [254,224, 144]],
-  [0.75, [145,191, 219]],
-  [1.00, [ 69,117, 180]],
-];
+    <footer class="footer">
+        <p><strong>LGRx Soil Moisture Network</strong> • University of Michigan</p>
+    </footer>
 
-function lerp(a, b, t) { return a + (b - a) * t; }
+    <script>
+        // ── Color Ramp Definition (Dry -> Wet: Red -> Orange -> Yellow -> Light Blue -> Dark Blue)
+        const COLOR_RAMP = [
+            [0.00, [215,  48,  39]],
+            [0.25, [252, 141,  89]],
+            [0.50, [254, 224, 144]],
+            [0.75, [145, 191, 219]],
+            [1.00, [ 69, 117, 180]]
+        ];
 
-function rampColor(val, vmin, vmax) {
-  const t = Math.max(0, Math.min(1, (val - vmin) / (vmax - vmin)));
-  for (let i = 0; i < RAMP.length - 1; i++) {
-    if (t <= RAMP[i+1][0]) {
-      const seg = (t - RAMP[i][0]) / (RAMP[i+1][0] - RAMP[i][0]);
-      const r = Math.round(lerp(RAMP[i][1][0], RAMP[i+1][1][0], seg));
-      const g = Math.round(lerp(RAMP[i][1][1], RAMP[i+1][1][1], seg));
-      const b = Math.round(lerp(RAMP[i][1][2], RAMP[i+1][1][2], seg));
-      return `rgb(${r},${g},${b})`;
-    }
-  }
-  return `rgb(${RAMP[RAMP.length-1][1].join(',')})`;
-}
+        function lerp(a, b, t) { return a + (b - a) * t; }
 
-// ── IDW interpolation ─────────────────────────────────────────────────────
-function idw(pts, xi, yi, power = 2, eps = 1e-9) {
-  let wSum = 0, vzSum = 0;
-  for (const p of pts) {
-    const d = Math.sqrt((p.x - xi)**2 + (p.y - yi)**2) + eps;
-    const w = 1.0 / Math.pow(d, power);
-    wSum += w;
-    vzSum += w * p.z;
-  }
-  return vzSum / wSum;
-}
+        function getColorForValue(val, vmin, vmax) {
+            const t = Math.max(0, Math.min(1, (val - vmin) / ((vmax - vmin) || 1)));
+            for (let i = 0; i < COLOR_RAMP.length - 1; i++) {
+                if (t <= COLOR_RAMP[i + 1][0]) {
+                    const seg = (t - COLOR_RAMP[i][0]) / (COLOR_RAMP[i + 1][0] - COLOR_RAMP[i][0]);
+                    const r = Math.round(lerp(COLOR_RAMP[i][1][0], COLOR_RAMP[i + 1][1][0], seg));
+                    const g = Math.round(lerp(COLOR_RAMP[i][1][1], COLOR_RAMP[i + 1][1][1], seg));
+                    const b = Math.round(lerp(COLOR_RAMP[i][1][2], COLOR_RAMP[i + 1][1][2], seg));
+                    return `rgb(${r},${g},${b})`;
+                }
+            }
+            const last = COLOR_RAMP[COLOR_RAMP.length - 1][1];
+            return `rgb(${last[0]},${last[1]},${last[2]})`;
+        }
 
-// ── Build grid & GeoJSON ──────────────────────────────────────────────────
-function buildGrid(pts, vmin, vmax, res = 80) {
-  const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon);
-  const latMin = Math.min(...lats), latMax = Math.max(...lats);
-  const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
-  const pad = 0.0005;
+        // ── Inverse-Distance Weighting (IDW) Grid Calculation
+        function calculateIdw(points, targetX, targetY, power = 2, eps = 1e-9) {
+            let weightSum = 0;
+            let valueSum = 0;
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const dist = Math.sqrt((p.lon - targetX) ** 2 + (p.lat - targetY) ** 2) + eps;
+                const weight = 1.0 / Math.pow(dist, power);
+                weightSum += weight;
+                valueSum += weight * p.moisture;
+            }
+            return valueSum / weightSum;
+        }
 
-  const latArr = [], lonArr = [];
-  for (let i = 0; i < res; i++) {
-    latArr.push(latMin - pad + (i / (res-1)) * (latMax - latMin + 2*pad));
-    lonArr.push(lonMin - pad + (i / (res-1)) * (lonMax - lonMin + 2*pad));
-  }
+        function generateGridGeoJson(points, vmin, vmax, resolution = 75) {
+            const lats = points.map(p => p.lat);
+            const lons = points.map(p => p.lon);
+            const latMin = Math.min(...lats);
+            const latMax = Math.max(...lats);
+            const lonMin = Math.min(...lons);
+            const lonMax = Math.max(...lons);
 
-  const idwPts = pts.map(p => ({ x: p.lon, y: p.lat, z: p.mois }));
-  const dlat = (latArr[1] - latArr[0]) / 2;
-  const dlon = (lonArr[1] - lonArr[0]) / 2;
+            const pad = 0.0005; // ~45-50 meters margin around field points
+            const latStep = (latMax - latMin + 2 * pad) / (resolution - 1);
+            const lonStep = (lonMax - lonMin + 2 * pad) / (resolution - 1);
 
-  const features = [];
-  for (let i = 0; i < res; i++) {
-    for (let j = 0; j < res; j++) {
-      const clat = latArr[i], clon = lonArr[j];
-      const val = Math.max(vmin, Math.min(vmax, idw(idwPts, clon, clat)));
-      features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[
-            [clon - dlon, clat - dlat],
-            [clon + dlon, clat - dlat],
-            [clon + dlon, clat + dlat],
-            [clon - dlon, clat + dlat],
-            [clon - dlon, clat - dlat],
-          ]]
-        },
-        properties: { val, color: rampColor(val, vmin, vmax) }
-      });
-    }
-  }
-  return { type: 'FeatureCollection', features };
-}
+            const dLat = latStep / 2;
+            const dLon = lonStep / 2;
 
-// ── Map state ─────────────────────────────────────────────────────────────
-let map = null;
-let heatLayer = null, markerLayer = null;
+            const features = [];
+            for (let i = 0; i < resolution; i++) {
+                const curLat = (latMin - pad) + (i * latStep);
+                for (let j = 0; j < resolution; j++) {
+                    const curLon = (lonMin - pad) + (j * lonStep);
+                    const val = Math.max(vmin, Math.min(vmax, calculateIdw(points, curLon, curLat)));
+                    const cellColor = getColorForValue(val, vmin, vmax);
 
-function initMap(center) {
-  if (map) return;
-  map = L.map('hydra-map', { center, zoom: 17 });
+                    features.push({
+                        type: "Feature",
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [[
+                                [curLon - dLon, curLat - dLat],
+                                [curLon + dLon, curLat - dLat],
+                                [curLon + dLon, curLat + dLat],
+                                [curLon - dLon, curLat + dLat],
+                                [curLon - dLon, curLat - dLat]
+                            ]]
+                        },
+                        properties: {
+                            moisture: val,
+                            fillColor: cellColor
+                        }
+                    });
+                }
+            }
 
-  L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    attribution: 'Google Satellite', maxZoom: 21, name: '🛰️ Satellite'
-  }).addTo(map);
-}
+            return { type: "FeatureCollection", features: features };
+        }
 
-function renderMap(rows) {
-  const statusBar = document.getElementById('status-bar');
-  statusBar.textContent = '⏳ Interpolating grid…';
+        // ── Map State Management
+        let mapInstance = null;
+        let heatmapLayer = null;
+        let pointsLayer = null;
+        let layerControl = null;
 
-  // Slight defer so the UI can update
-  setTimeout(() => {
-    // Filter & clean
-    const pts = rows
-      .map(r => ({
-        lat:  parseFloat(r['Latitude']),
-        lon:  parseFloat(r['Longitude']),
-        mois: parseFloat(r['Soil Moisture (%)']),
-        temp: parseFloat(r['Soil Temperature (C)']),
-        ec:   parseFloat(r['Bulk EC(TC) (dS/m)']),
-        ts:   r['Timestamp'] || '',
-      }))
-      .filter(p => !isNaN(p.lat) && !isNaN(p.lon) && !isNaN(p.mois) && p.mois > 0.5);
+        function initializeMap(centerLat, centerLon) {
+            if (mapInstance) return;
 
-    if (pts.length === 0) {
-      statusBar.textContent = '⚠️ No valid readings found. Check column names in the CSV.';
-      return;
-    }
+            mapInstance = L.map('map-container', {
+                center: [centerLat, centerLon],
+                zoom: 17
+            });
 
-    const moistures = pts.map(p => p.mois);
-    const vmin = Math.max(0,   Math.min(...moistures) - 1);
-    const vmax = Math.min(100, Math.max(...moistures) + 1);
-    const center = [
-      pts.reduce((s,p) => s + p.lat, 0) / pts.length,
-      pts.reduce((s,p) => s + p.lon, 0) / pts.length,
-    ];
+            const satelliteTile = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: 'Google Satellite',
+                maxZoom: 21
+            });
 
-    // Show map
-    document.getElementById('empty-state').style.display = 'none';
-    document.getElementById('map-wrap').style.display = 'block';
-    initMap(center);
+            const streetTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'OpenStreetMap contributors',
+                maxZoom: 19
+            });
 
-    // Remove old layers
-    if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-    if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
+            satelliteTile.addTo(mapInstance);
 
-    // Build grid GeoJSON
-    const geojson = buildGrid(pts, vmin, vmax);
+            const baseLayers = {
+                "Satellite View": satelliteTile,
+                "Street View": streetTile
+            };
 
-    heatLayer = L.geoJSON(geojson, {
-      style: f => ({
-        fillColor: f.properties.color,
-        color: 'none',
-        weight: 0,
-        fillOpacity: 0.62,
-      }),
-      onEachFeature: (f, layer) => {
-        layer.bindTooltip(`Moisture: ${f.properties.val.toFixed(1)}%`);
-      }
-    }).addTo(map);
+            layerControl = L.control.layers(baseLayers, null, { position: 'topright' }).addTo(mapInstance);
+        }
 
-    // Per-point markers (averaged at same lat/lon)
-    const byKey = {};
-    for (const p of pts) {
-      const key = `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
-      if (!byKey[key]) byKey[key] = { lat: p.lat, lon: p.lon, mois: [], temp: [], ec: [], ts: p.ts };
-      byKey[key].mois.push(p.mois);
-      if (!isNaN(p.temp)) byKey[key].temp.push(p.temp);
-      if (!isNaN(p.ec))   byKey[key].ec.push(p.ec);
-    }
+        function setStatus(message, type = 'info') {
+            const statusEl = document.getElementById('upload-status');
+            statusEl.className = 'download-status ' + type;
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+        }
 
-    const mean = arr => arr.length ? arr.reduce((s,v) => s+v, 0) / arr.length : NaN;
+        function hideStatus() {
+            const statusEl = document.getElementById('upload-status');
+            statusEl.style.display = 'none';
+        }
 
-    markerLayer = L.featureGroup();
-    for (const agg of Object.values(byKey)) {
-      const avgM = mean(agg.mois);
-      const avgT = mean(agg.temp);
-      const avgE = mean(agg.ec);
-      const color = rampColor(avgM, vmin, vmax);
-      const popup = `
-        <div style="font-family:Inter,sans-serif;font-size:13px;min-width:190px">
-          <b style="font-size:15px">📍 Sample Point</b><hr style="margin:4px 0">
-          <b>Avg Moisture:</b> ${avgM.toFixed(1)}%<br>
-          <b>Range:</b> ${Math.min(...agg.mois).toFixed(1)}% – ${Math.max(...agg.mois).toFixed(1)}%<br>
-          <b>Avg Temp:</b> ${isNaN(avgT) ? 'N/A' : avgT.toFixed(1) + ' °C'}<br>
-          <b>Avg Bulk EC:</b> ${isNaN(avgE) ? 'N/A' : avgE.toFixed(3) + ' dS/m'}<br>
-          <b>Readings:</b> ${agg.mois.length}<br>
-          <small style="color:#888">${agg.lat.toFixed(6)}, ${agg.lon.toFixed(6)}</small>
-        </div>`;
-      L.circleMarker([agg.lat, agg.lon], {
-        radius: 6, color: 'white', weight: 1.5,
-        fillColor: color, fillOpacity: 0.95, fill: true,
-      })
-        .bindPopup(popup, { maxWidth: 240 })
-        .bindTooltip(`Moisture: ${avgM.toFixed(1)}%`)
-        .addTo(markerLayer);
-    }
-    markerLayer.addTo(map);
+        // ── Process Parsed Rows & Render Visualization
+        function processAndRenderData(rows, sourceName = 'HydraGO CSV') {
+            setStatus('Parsing and validating sensor data...', 'info');
 
-    // Fit bounds
-    map.fitBounds(markerLayer.getBounds().pad(0.1));
+            setTimeout(() => {
+                const validPoints = [];
 
-    // Stats panel
-    const allMois = pts.map(p => p.mois);
-    const allTemp = pts.map(p => p.temp).filter(v => !isNaN(v));
-    const allEc   = pts.map(p => p.ec).filter(v => !isNaN(v));
-    const statsTable = document.getElementById('stats-table');
-    statsTable.innerHTML = `
-      <tr><td>Avg Moisture</td><td>${mean(allMois).toFixed(1)}%</td></tr>
-      <tr><td>Min / Max</td><td>${Math.min(...allMois).toFixed(1)}% / ${Math.max(...allMois).toFixed(1)}%</td></tr>
-      <tr><td style="color:#ffcc80">Avg Temp</td><td>${allTemp.length ? mean(allTemp).toFixed(1)+' °C' : 'N/A'}</td></tr>
-      <tr><td style="color:#a5d6a7">Avg Bulk EC</td><td>${allEc.length ? mean(allEc).toFixed(3)+' dS/m' : 'N/A'}</td></tr>
-      <tr><td style="color:#ce93d8">Sample Points</td><td>${Object.keys(byKey).length}</td></tr>
-      <tr><td style="color:#ce93d8">Total Readings</td><td>${pts.length}</td></tr>
-    `;
-    document.getElementById('stats-ts').textContent = `HydraGO · ${new Date().toISOString().slice(0,10)}`;
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const lat = parseFloat(row['Latitude']);
+                    const lon = parseFloat(row['Longitude']);
+                    const moisture = parseFloat(row['Soil Moisture (%)']);
+                    const temp = parseFloat(row['Soil Temperature (C)']);
+                    const ec = parseFloat(row['Bulk EC(TC) (dS/m)']);
 
-    // Legend range
-    document.getElementById('leg-min').textContent = vmin.toFixed(1) + '%';
-    document.getElementById('leg-max').textContent = vmax.toFixed(1) + '%';
+                    // Validate coordinates and ensure moisture is in realistic soil range (> 0.5%)
+                    if (!isNaN(lat) && !isNaN(lon) && !isNaN(moisture) && moisture > 0.5) {
+                        validPoints.push({
+                            lat: lat,
+                            lon: lon,
+                            moisture: moisture,
+                            temp: isNaN(temp) ? null : temp,
+                            ec: isNaN(ec) ? null : ec,
+                            rawRow: row
+                        });
+                    }
+                }
 
-    statusBar.textContent = `✅ Loaded ${pts.length} readings across ${Object.keys(byKey).length} sample points.`;
-  }, 50);
-}
+                if (validPoints.length === 0) {
+                    setStatus('Error: No valid readings found in the CSV. Please ensure the file has Latitude, Longitude, and Soil Moisture (%) headers.', 'error');
+                    return;
+                }
 
-// ── File input / drag & drop ──────────────────────────────────────────────
-function handleFile(file) {
-  if (!file || !file.name.endsWith('.csv')) {
-    document.getElementById('status-bar').style.display = 'block';
-    document.getElementById('status-bar').textContent = '⚠️ Please select a .csv file.';
-    return;
-  }
-  document.getElementById('file-name-label').textContent = file.name;
-  document.getElementById('status-bar').style.display = 'block';
-  document.getElementById('status-bar').textContent = '⏳ Parsing CSV…';
+                const moistures = validPoints.map(p => p.moisture);
+                const temps = validPoints.map(p => p.temp).filter(v => v !== null);
+                const ecs = validPoints.map(p => p.ec).filter(v => v !== null);
 
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: h => h.trim(),
-    complete: result => renderMap(result.data),
-    error: err => {
-      document.getElementById('status-bar').textContent = '❌ Error parsing CSV: ' + err.message;
-    }
-  });
-}
+                const vmin = Math.max(0, Math.floor(Math.min(...moistures) - 1));
+                const vmax = Math.min(100, Math.ceil(Math.max(...moistures) + 1));
 
-document.getElementById('csv-input').addEventListener('change', e => {
-  handleFile(e.target.files[0]);
-});
+                const avgMoist = moistures.reduce((a, b) => a + b, 0) / moistures.length;
+                const minMoist = Math.min(...moistures);
+                const maxMoist = Math.max(...moistures);
+                const avgTemp = temps.length ? (temps.reduce((a, b) => a + b, 0) / temps.length) : null;
+                const avgEc = ecs.length ? (ecs.reduce((a, b) => a + b, 0) / ecs.length) : null;
 
-const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  handleFile(e.dataTransfer.files[0]);
-});
-</script>
+                // Group points by location coordinates for markers
+                const locationGroups = {};
+                for (let i = 0; i < validPoints.length; i++) {
+                    const p = validPoints[i];
+                    const locKey = p.lat.toFixed(6) + ',' + p.lon.toFixed(6);
+                    if (!locationGroups[locKey]) {
+                        locationGroups[locKey] = {
+                            lat: p.lat,
+                            lon: p.lon,
+                            moistures: [],
+                            temps: [],
+                            ecs: []
+                        };
+                    }
+                    locationGroups[locKey].moistures.push(p.moisture);
+                    if (p.temp !== null) locationGroups[locKey].temps.push(p.temp);
+                    if (p.ec !== null) locationGroups[locKey].ecs.push(p.ec);
+                }
+
+                const uniqueLocationCount = Object.keys(locationGroups).length;
+
+                // Update Stats Bar UI
+                document.getElementById('stat-avg-moist').textContent = avgMoist.toFixed(1) + '%';
+                document.getElementById('stat-range-moist').textContent = minMoist.toFixed(1) + '% – ' + maxMoist.toFixed(1) + '%';
+                document.getElementById('stat-avg-temp').textContent = avgTemp !== null ? avgTemp.toFixed(1) + ' °C' : 'N/A';
+                document.getElementById('stat-avg-ec').textContent = avgEc !== null ? avgEc.toFixed(3) + ' dS/m' : 'N/A';
+                document.getElementById('stat-locations').textContent = uniqueLocationCount.toLocaleString();
+                document.getElementById('stat-readings').textContent = validPoints.length.toLocaleString();
+
+                document.getElementById('stats-grid').style.display = 'grid';
+                document.getElementById('map-empty-placeholder').style.display = 'none';
+                document.getElementById('map-wrapper').style.display = 'block';
+
+                // Initialize Leaflet Map centered on field
+                const centerLat = validPoints.reduce((s, p) => s + p.lat, 0) / validPoints.length;
+                const centerLon = validPoints.reduce((s, p) => s + p.lon, 0) / validPoints.length;
+                initializeMap(centerLat, centerLon);
+
+                // Clear old overlay layers if present
+                if (heatmapLayer) {
+                    mapInstance.removeLayer(heatmapLayer);
+                    if (layerControl) layerControl.removeLayer(heatmapLayer);
+                    heatmapLayer = null;
+                }
+                if (pointsLayer) {
+                    mapInstance.removeLayer(pointsLayer);
+                    if (layerControl) layerControl.removeLayer(pointsLayer);
+                    pointsLayer = null;
+                }
+
+                // Generate IDW Grid Overlay
+                setStatus('Generating spatial interpolation overlay...', 'info');
+                const geoJsonData = generateGridGeoJson(validPoints, vmin, vmax, 75);
+
+                heatmapLayer = L.geoJSON(geoJsonData, {
+                    style: function(feature) {
+                        return {
+                            fillColor: feature.properties.fillColor,
+                            color: 'none',
+                            weight: 0,
+                            fillOpacity: 0.62
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.bindTooltip('Interpolated Moisture: ' + feature.properties.moisture.toFixed(1) + '%');
+                    }
+                }).addTo(mapInstance);
+
+                // Add individual sample point circle markers
+                pointsLayer = L.featureGroup();
+                for (const key in locationGroups) {
+                    const loc = locationGroups[key];
+                    const locAvgM = loc.moistures.reduce((a, b) => a + b, 0) / loc.moistures.length;
+                    const locMinM = Math.min(...loc.moistures);
+                    const locMaxM = Math.max(...loc.moistures);
+                    const locAvgT = loc.temps.length ? (loc.temps.reduce((a, b) => a + b, 0) / loc.temps.length) : null;
+                    const locAvgE = loc.ecs.length ? (loc.ecs.reduce((a, b) => a + b, 0) / loc.ecs.length) : null;
+
+                    const markerColor = getColorForValue(locAvgM, vmin, vmax);
+
+                    const popupHtml = `
+                        <div class="marker-popup">
+                            <h4>Sample Location</h4>
+                            <table>
+                                <tr><td>Avg Moisture:</td><td>${locAvgM.toFixed(1)}%</td></tr>
+                                <tr><td>Range:</td><td>${locMinM.toFixed(1)}% – ${locMaxM.toFixed(1)}%</td></tr>
+                                <tr><td>Avg Temp:</td><td>${locAvgT !== null ? locAvgT.toFixed(1) + ' °C' : 'N/A'}</td></tr>
+                                <tr><td>Avg Bulk EC:</td><td>${locAvgE !== null ? locAvgE.toFixed(3) + ' dS/m' : 'N/A'}</td></tr>
+                                <tr><td>Readings:</td><td>${loc.moistures.length}</td></tr>
+                            </table>
+                            <div style="font-size:0.75rem; color:#64748b; margin-top:0.35rem; border-top:1px solid #e2e8f0; padding-top:0.25rem;">
+                                ${loc.lat.toFixed(6)}, ${loc.lon.toFixed(6)}
+                            </div>
+                        </div>
+                    `;
+
+                    L.circleMarker([loc.lat, loc.lon], {
+                        radius: 6,
+                        color: '#ffffff',
+                        weight: 1.5,
+                        fillColor: markerColor,
+                        fillOpacity: 0.95,
+                        fill: true
+                    })
+                    .bindPopup(popupHtml, { maxWidth: 260 })
+                    .bindTooltip('Moisture: ' + locAvgM.toFixed(1) + '%')
+                    .addTo(pointsLayer);
+                }
+
+                pointsLayer.addTo(mapInstance);
+
+                // Register overlay controls in the layer switcher
+                if (layerControl) {
+                    layerControl.addOverlay(heatmapLayer, "Moisture Heatmap");
+                    layerControl.addOverlay(pointsLayer, "Sample Points");
+                }
+
+                // Fit map viewport to sample markers
+                mapInstance.fitBounds(pointsLayer.getBounds().pad(0.08));
+
+                // Update Legend Values
+                document.getElementById('leg-min').textContent = vmin.toFixed(1) + '%';
+                document.getElementById('leg-mid').textContent = ((vmin + vmax) / 2).toFixed(1) + '%';
+                document.getElementById('leg-max').textContent = vmax.toFixed(1) + '%';
+
+                setStatus(`Successfully loaded ${validPoints.length} readings across ${uniqueLocationCount} sample locations from ${sourceName}.`, 'success');
+            }, 40);
+        }
+
+        // ── File Selection & Parsing Handler
+        function handleFileSelection(file) {
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                setStatus('Error: Please select a valid .csv file.', 'error');
+                return;
+            }
+
+            document.getElementById('file-name-display').textContent = 'Selected: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+            setStatus('Reading CSV file contents...', 'info');
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: function(result) {
+                    if (result.errors && result.errors.length > 0 && (!result.data || result.data.length === 0)) {
+                        setStatus('Error parsing CSV: ' + result.errors[0].message, 'error');
+                        return;
+                    }
+                    processAndRenderData(result.data, file.name);
+                },
+                error: function(err) {
+                    setStatus('Error reading CSV file: ' + err.message, 'error');
+                }
+            });
+        }
+
+        // ── Load Bundled Sample Data
+        function loadSampleFieldData() {
+            setStatus('Fetching bundled sample field data (Oct 23, 2026)...', 'info');
+            document.getElementById('file-name-display').textContent = 'Loading sample field dataset...';
+
+            Papa.parse('assets/hydrago-sample.csv', {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: function(result) {
+                    document.getElementById('file-name-display').textContent = 'Loaded: HydraGO Sample Dataset (Oct 23, 2026)';
+                    processAndRenderData(result.data, 'HydraGO Sample Dataset (Oct 23, 2026)');
+                },
+                error: function(err) {
+                    setStatus('Unable to load sample CSV: ' + err.message, 'error');
+                }
+            });
+        }
+
+        // ── Clear / Reset Map View
+        function resetMapView() {
+            document.getElementById('stats-grid').style.display = 'none';
+            document.getElementById('map-wrapper').style.display = 'none';
+            document.getElementById('map-empty-placeholder').style.display = 'flex';
+            document.getElementById('file-name-display').textContent = 'No file currently loaded';
+            document.getElementById('csv-file-input').value = '';
+
+            if (heatmapLayer && mapInstance) {
+                mapInstance.removeLayer(heatmapLayer);
+                if (layerControl) layerControl.removeLayer(heatmapLayer);
+                heatmapLayer = null;
+            }
+            if (pointsLayer && mapInstance) {
+                mapInstance.removeLayer(pointsLayer);
+                if (layerControl) layerControl.removeLayer(pointsLayer);
+                pointsLayer = null;
+            }
+
+            hideStatus();
+        }
+
+        // ── Event Listeners Setup
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('csv-file-input');
+        const browseBtn = document.getElementById('btn-browse-trigger');
+        const sampleBtn = document.getElementById('btn-sample-data');
+        const clearBtn = document.getElementById('btn-clear-data');
+
+        browseBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        dropZone.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+
+        sampleBtn.addEventListener('click', loadSampleFieldData);
+        clearBtn.addEventListener('click', resetMapView);
+    </script>
 </body>
 </html>
