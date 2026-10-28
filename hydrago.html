@@ -62,20 +62,20 @@
         /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
             margin-bottom: 1.25rem;
         }
         .stat-card {
             background: #f8fafc;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
-            padding: 0.85rem 1rem;
+            padding: 0.85rem 0.75rem;
             text-align: center;
         }
         .stat-card .stat-label {
             display: block;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             text-transform: uppercase;
             font-weight: bold;
             letter-spacing: 0.5px;
@@ -83,8 +83,70 @@
             margin-bottom: 0.35rem;
         }
         .stat-card .stat-value {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: bold;
+            color: var(--umich-blue);
+        }
+
+        /* Grid Controls Toolbar */
+        .grid-toolbar {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .grid-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .grid-toolbar-label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--umich-blue);
+        }
+        .btn-grid-preset {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.3rem 0.65rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .btn-grid-preset:hover {
+            border-color: var(--umich-blue);
+            background: #f0f7ff;
+            color: var(--umich-blue);
+        }
+        .btn-grid-preset.active {
+            background: var(--umich-blue);
+            border-color: var(--umich-blue);
+            color: #ffffff;
+        }
+        .grid-custom-input {
+            width: 75px;
+            padding: 0.3rem 0.45rem;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .grid-toolbar-right {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .grid-toolbar-right strong {
             color: var(--umich-blue);
         }
 
@@ -115,7 +177,7 @@
             font-size: 0.95rem;
         }
 
-        /* Crisp 0.5m grid rendering over satellite imagery */
+        /* Crisp grid cell rendering over satellite imagery */
         .leaflet-image-layer {
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
@@ -135,7 +197,7 @@
             padding: 0.75rem 1rem;
             box-shadow: var(--shadow-md);
             font-family: Arial, Helvetica, sans-serif;
-            min-width: 200px;
+            min-width: 210px;
         }
         .legend-title {
             font-size: 0.75rem;
@@ -143,7 +205,15 @@
             color: var(--text-main);
             text-transform: uppercase;
             letter-spacing: 0.4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 0.4rem;
+        }
+        .legend-grid-tag {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: normal;
         }
         .legend-bar {
             height: 14px;
@@ -282,7 +352,7 @@
         <section id="map-section" class="section-card">
             <div class="section-header">
                 <h2>Soil Moisture Map</h2>
-                <span class="node-status-badge" id="map-status-badge"><span class="pulse-dot"></span>0.5 m Grid</span>
+                <span class="node-status-badge" id="map-status-badge"><span class="pulse-dot"></span>Grid: 0.5 m</span>
             </div>
 
             <!-- Stats Bar -->
@@ -311,6 +381,27 @@
                     <span class="stat-label">Active Readings</span>
                     <span class="stat-value" id="stat-readings">--</span>
                 </div>
+                <div class="stat-card">
+                    <span class="stat-label">Grid Resolution</span>
+                    <span class="stat-value" id="stat-grid-size">0.5 m</span>
+                </div>
+            </div>
+
+            <!-- Regrid Controls Toolbar -->
+            <div class="grid-toolbar" id="grid-toolbar" style="display: none;">
+                <div class="grid-toolbar-left">
+                    <span class="grid-toolbar-label">Regrid Resolution:</span>
+                    <button type="button" class="btn-grid-preset" data-size="0.25">0.25 m</button>
+                    <button type="button" class="btn-grid-preset active" data-size="0.5">0.5 m</button>
+                    <button type="button" class="btn-grid-preset" data-size="1.0">1.0 m</button>
+                    <button type="button" class="btn-grid-preset" data-size="2.0">2.0 m</button>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.35rem;">or custom:</span>
+                    <input type="number" id="custom-grid-input" class="grid-custom-input" min="0.1" max="10" step="0.1" value="0.5" placeholder="meters">
+                    <button type="button" class="btn-submit" id="btn-apply-custom-grid" style="height: 30px; padding: 0 0.75rem; font-size: 0.8rem;">Apply</button>
+                </div>
+                <div class="grid-toolbar-right">
+                    Current Grid: <strong id="grid-summary-display">0.5 m</strong>
+                </div>
             </div>
 
             <!-- Empty Placeholder -->
@@ -323,7 +414,10 @@
             <div id="map-wrapper" style="display: none; position: relative;">
                 <div id="map-container"></div>
                 <div id="moisture-legend" class="map-legend">
-                    <div class="legend-title">Soil Moisture (%)</div>
+                    <div class="legend-title">
+                        <span>Soil Moisture (%)</span>
+                        <span class="legend-grid-tag" id="legend-grid-tag">0.5 m grid</span>
+                    </div>
                     <div class="legend-bar"></div>
                     <div class="legend-labels">
                         <span id="leg-min">--</span>
@@ -383,8 +477,8 @@
             return [last[0], last[1], last[2]];
         }
 
-        // ── Ultra-fast 0.5m Rasterized Grid Generation with distance mask
-        function generate05mGridCanvas(points, vmin, vmax, cellSizeMeters = 0.5, maxDistanceMeters = 5.5) {
+        // ── Parametric Rasterized Grid Generation (supports any grid size in meters)
+        function generateGridCanvas(points, vmin, vmax, cellSizeMeters = 0.5, maxDistanceMeters = 5.5) {
             if (!points || points.length === 0) return null;
 
             const latMean = points.reduce((s, p) => s + p.lat, 0) / points.length;
@@ -419,8 +513,8 @@
                 val: p.moisture
             }));
 
-            // Spatial bucketing (6 meter buckets) for fast neighborhood lookup
-            const bucketSize = 6.0;
+            // Spatial bucketing for fast neighborhood lookup
+            const bucketSize = Math.max(6.0, cellSizeMeters * 2);
             const buckets = {};
             for (let i = 0; i < pts.length; i++) {
                 const p = pts[i];
@@ -495,7 +589,10 @@
                 bounds: [
                     [gridLatMin, gridLonMin],
                     [gridLatMax, gridLonMax]
-                ]
+                ],
+                cols: cols,
+                rows: rows,
+                cellSize: cellSizeMeters
             };
         }
 
@@ -503,6 +600,7 @@
         let allReadings = [];         // Original dataset
         let activeReadings = [];      // Current dataset (with deletions applied)
         let deletedPointsStack = [];  // Undo stack
+        let currentGridSize = 0.5;    // Current grid size in meters (default 0.5m)
         let mapInstance = null;
         let imageOverlayLayer = null;
         let pointsMarkerLayer = null;
@@ -550,7 +648,7 @@
             statusEl.style.display = 'none';
         }
 
-        // ── Main Render: Computes 0.5m grid & markers for current active dataset
+        // ── Main Render: Computes grid & markers for current active dataset & grid size
         function renderSoilMoistureMap(dataset, shouldFitBounds = false) {
             if (!dataset || dataset.length === 0) {
                 resetMapView();
@@ -593,8 +691,10 @@
             document.getElementById('stat-avg-ec').textContent = avgEc !== null ? avgEc.toFixed(3) + ' dS/m' : 'N/A';
             document.getElementById('stat-locations').textContent = uniqueLocations.toLocaleString();
             document.getElementById('stat-readings').textContent = dataset.length.toLocaleString();
+            document.getElementById('stat-grid-size').textContent = `${currentGridSize} m`;
 
             document.getElementById('stats-grid').style.display = 'grid';
+            document.getElementById('grid-toolbar').style.display = 'flex';
             document.getElementById('map-empty-placeholder').style.display = 'none';
             document.getElementById('map-wrapper').style.display = 'block';
 
@@ -615,8 +715,8 @@
                 pointsMarkerLayer = null;
             }
 
-            // Generate 0.5m raster grid overlay
-            const gridResult = generate05mGridCanvas(dataset, vmin, vmax, 0.5, 5.5);
+            // Generate parametric raster grid overlay at currentGridSize
+            const gridResult = generateGridCanvas(dataset, vmin, vmax, currentGridSize, 5.5);
             if (gridResult) {
                 imageOverlayLayer = L.imageOverlay(gridResult.dataUrl, gridResult.bounds, {
                     opacity: 0.82,
@@ -624,8 +724,14 @@
                 }).addTo(mapInstance);
 
                 if (layerControl) {
-                    layerControl.addOverlay(imageOverlayLayer, "Soil Moisture Map");
+                    layerControl.addOverlay(imageOverlayLayer, `Soil Moisture Map (${currentGridSize} m)`);
                 }
+
+                // Update Grid Displays
+                const dimStr = `${currentGridSize} m (${gridResult.cols} cols × ${gridResult.rows} rows)`;
+                document.getElementById('grid-summary-display').textContent = dimStr;
+                document.getElementById('map-status-badge').innerHTML = `<span class="pulse-dot"></span>Grid: ${currentGridSize} m`;
+                document.getElementById('legend-grid-tag').textContent = `${currentGridSize} m grid`;
             }
 
             // Render interactive sample point markers
@@ -697,6 +803,39 @@
 
             // Update Undo & Restore button states
             updateActionButtons();
+            syncGridControlButtons();
+        }
+
+        // ── Regrid Action Handler
+        function setGridSize(newSize) {
+            const parsed = parseFloat(newSize);
+            if (isNaN(parsed) || parsed <= 0 || parsed > 50) {
+                alert('Please enter a valid grid size between 0.1 and 50 meters.');
+                return;
+            }
+
+            currentGridSize = Math.round(parsed * 100) / 100; // Round to 2 decimal places
+            document.getElementById('custom-grid-input').value = currentGridSize;
+
+            syncGridControlButtons();
+
+            if (activeReadings.length > 0) {
+                renderSoilMoistureMap(activeReadings, false);
+                setStatus(`Regridded soil moisture map to ${currentGridSize} meter resolution.`, 'info');
+            }
+        }
+
+        function syncGridControlButtons() {
+            const buttons = document.querySelectorAll('.btn-grid-preset');
+            buttons.forEach(btn => {
+                const size = parseFloat(btn.dataset.size);
+                if (Math.abs(size - currentGridSize) < 0.001) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            document.getElementById('custom-grid-input').value = currentGridSize;
         }
 
         // ── Delete Point Handler & Real-Time Recalculation
@@ -880,6 +1019,7 @@
             deletedPointsStack = [];
 
             document.getElementById('stats-grid').style.display = 'none';
+            document.getElementById('grid-toolbar').style.display = 'none';
             document.getElementById('map-wrapper').style.display = 'none';
             document.getElementById('map-empty-placeholder').style.display = 'flex';
             document.getElementById('file-name-display').textContent = 'No file currently loaded';
@@ -908,6 +1048,8 @@
         const clearBtn = document.getElementById('btn-clear-data');
         const undoBtn = document.getElementById('btn-undo-delete');
         const restoreBtn = document.getElementById('btn-restore-all');
+        const applyCustomGridBtn = document.getElementById('btn-apply-custom-grid');
+        const customGridInput = document.getElementById('custom-grid-input');
 
         browseBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -946,6 +1088,23 @@
         clearBtn.addEventListener('click', resetMapView);
         undoBtn.addEventListener('click', window.undoLastDelete);
         restoreBtn.addEventListener('click', restoreAllPoints);
+
+        // Regrid button preset listeners
+        document.querySelectorAll('.btn-grid-preset').forEach(btn => {
+            btn.addEventListener('click', function() {
+                setGridSize(this.dataset.size);
+            });
+        });
+
+        applyCustomGridBtn.addEventListener('click', function() {
+            setGridSize(customGridInput.value);
+        });
+
+        customGridInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                setGridSize(customGridInput.value);
+            }
+        });
     </script>
 </body>
 </html>
