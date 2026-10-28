@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HydraGO Field Map — LGRx</title>
+  <link rel="stylesheet" href="assets/style.css?v=20260827_v2" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Papa Parse (CSV parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Page Layout ─────────────────────────────────────────── */
+    body { margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; background: #0a0f1e; color: #e8eaf6; }
+
+    .hydrago-hero {
+      padding: 40px 32px 28px;
+      background: linear-gradient(135deg, #0d1b2a 0%, #1a2a1a 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .hydrago-hero h1 {
+      margin: 0 0 4px;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #a5d6a7;
+    }
+    .hydrago-hero p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #90a4ae;
+    }
+    .upload-zone {
+      flex: 1 1 320px;
+      min-width: 280px;
+      border: 2px dashed rgba(165,214,167,0.45);
+      border-radius: 14px;
+      padding: 22px 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: rgba(165,214,167,0.04);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: #a5d6a7;
+      background: rgba(165,214,167,0.10);
+    }
+    .upload-zone input { display: none; }
+    .upload-zone label {
+      cursor: pointer;
+      display: block;
+      font-size: 0.92rem;
+      color: #b2dfdb;
+    }
+    .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 6px; }
+    .upload-zone .file-name {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: #78909c;
+    }
+
+    /* ── Status bar ──────────────────────────────────────────── */
+    #status-bar {
+      display: none;
+      background: rgba(10,15,30,0.95);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 10px 32px;
+      font-size: 0.85rem;
+      color: #90caf9;
+    }
+
+    /* ── Map container ───────────────────────────────────────── */
+    #map-wrap {
+      display: none;
+      position: relative;
+    }
+    #hydra-map {
+      width: 100%;
+      height: calc(100vh - 220px);
+      min-height: 480px;
+      background: #0a0f1e;
+    }
+
+    /* ── Stats panel (inside map) ────────────────────────────── */
+    #stats-panel {
+      position: absolute;
+      bottom: 30px;
+      left: 15px;
+      z-index: 1000;
+      background: rgba(10,15,30,0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 14px 18px;
+      color: #e8eaf6;
+      font-size: 13px;
+      min-width: 210px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    #stats-panel h4 { margin: 0 0 8px; font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+    #stats-panel table { border-collapse: collapse; width: 100%; }
+    #stats-panel td:first-child { color: #90caf9; padding-right: 16px; }
+    #stats-panel td:last-child { text-align: right; font-weight: 600; }
+    #stats-panel .ts { margin-top: 8px; font-size: 11px; color: #78909c; }
+
+    /* ── Legend ─────────────────────────────────────────────── */
+    #moisture-legend {
+      position: absolute;
+      bottom: 30px;
+      right: 15px;
+      z-index: 1000;
+      background: rgba(10,15,30,0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 12px 16px;
+      color: #e8eaf6;
+      font-size: 12px;
+      min-width: 160px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    #moisture-legend h5 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+    .legend-bar {
+      height: 14px;
+      border-radius: 6px;
+      background: linear-gradient(to right, #d73027, #fc8d59, #fee090, #91bfdb, #4575b4);
+      margin-bottom: 4px;
+    }
+    .legend-labels { display: flex; justify-content: space-between; font-size: 11px; color: #90a4ae; }
+
+    /* ── Empty / error states ────────────────────────────────── */
+    #empty-state {
+      text-align: center;
+      padding: 80px 32px;
+      color: #546e7a;
+    }
+    #empty-state .big-icon { font-size: 3.5rem; margin-bottom: 16px; }
+    #empty-state h2 { margin: 0 0 8px; font-size: 1.2rem; color: #78909c; }
+    #empty-state p { margin: 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header (same as main site) ────────────────────────────────────────── -->
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html">
+      <img src="Block_M-Hex.png" alt="University of Michigan Block M" class="header-logo" />
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="index.html" class="nav-tab">Live Dashboard</a>
+      <div class="dropdown">
+        <button class="btn-highlight" aria-haspopup="true">Documentation &amp; Resources ▾</button>
+        <div class="dropdown-content">
+          <a href="manual.html">View Operating Manual</a>
+          <a href="materials.html">View Field Node Materials</a>
+        </div>
+      </div>
+      <a href="hydrago.html" class="nav-tab active-tab">HydraGO Map</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ── Hero / Upload ──────────────────────────────────────────────────────── -->
+<div class="hydrago-hero">
+  <div>
+    <h1>🌱 HydraGO Field Hydration Map</h1>
+    <p>Upload a HydraGO CSV export to generate an interactive soil moisture map.</p>
+  </div>
+  <div class="upload-zone" id="drop-zone">
+    <div class="upload-icon">📂</div>
+    <input type="file" id="csv-input" accept=".csv" />
+    <label for="csv-input">
+      <strong>Choose CSV file</strong> or drag &amp; drop here
+    </label>
+    <div class="file-name" id="file-name-label">No file selected</div>
+  </div>
+</div>
+
+<!-- ── Status bar ─────────────────────────────────────────────────────────── -->
+<div id="status-bar">⏳ Processing…</div>
+
+<!-- ── Empty state ────────────────────────────────────────────────────────── -->
+<div id="empty-state">
+  <div class="big-icon">🗺️</div>
+  <h2>No data loaded yet</h2>
+  <p>Select a HydraGO CSV file above to visualize soil moisture across the field.</p>
+</div>
+
+<!-- ── Map + overlays ─────────────────────────────────────────────────────── -->
+<div id="map-wrap">
+  <div id="hydra-map"></div>
+  <div id="stats-panel">
+    <h4>🌱 Field Statistics</h4>
+    <table id="stats-table"></table>
+    <div class="ts" id="stats-ts"></div>
+  </div>
+  <div id="moisture-legend">
+    <h5>Soil Moisture (%)</h5>
+    <div class="legend-bar"></div>
+    <div class="legend-labels">
+      <span id="leg-min">–</span>
+      <span id="leg-max">–</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Colour ramp (matches Python) ──────────────────────────────────────────
+const RAMP = [
+  [0.00, [215, 48,  39]],
+  [0.25, [252,141,  89]],
+  [0.50, [254,224, 144]],
+  [0.75, [145,191, 219]],
+  [1.00, [ 69,117, 180]],
+];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function rampColor(val, vmin, vmax) {
+  const t = Math.max(0, Math.min(1, (val - vmin) / (vmax - vmin)));
+  for (let i = 0; i < RAMP.length - 1; i++) {
+    if (t <= RAMP[i+1][0]) {
+      const seg = (t - RAMP[i][0]) / (RAMP[i+1][0] - RAMP[i][0]);
+      const r = Math.round(lerp(RAMP[i][1][0], RAMP[i+1][1][0], seg));
+      const g = Math.round(lerp(RAMP[i][1][1], RAMP[i+1][1][1], seg));
+      const b = Math.round(lerp(RAMP[i][1][2], RAMP[i+1][1][2], seg));
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+  return `rgb(${RAMP[RAMP.length-1][1].join(',')})`;
+}
+
+// ── IDW interpolation ─────────────────────────────────────────────────────
+function idw(pts, xi, yi, power = 2, eps = 1e-9) {
+  let wSum = 0, vzSum = 0;
+  for (const p of pts) {
+    const d = Math.sqrt((p.x - xi)**2 + (p.y - yi)**2) + eps;
+    const w = 1.0 / Math.pow(d, power);
+    wSum += w;
+    vzSum += w * p.z;
+  }
+  return vzSum / wSum;
+}
+
+// ── Build grid & GeoJSON ──────────────────────────────────────────────────
+function buildGrid(pts, vmin, vmax, res = 80) {
+  const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon);
+  const latMin = Math.min(...lats), latMax = Math.max(...lats);
+  const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
+  const pad = 0.0005;
+
+  const latArr = [], lonArr = [];
+  for (let i = 0; i < res; i++) {
+    latArr.push(latMin - pad + (i / (res-1)) * (latMax - latMin + 2*pad));
+    lonArr.push(lonMin - pad + (i / (res-1)) * (lonMax - lonMin + 2*pad));
+  }
+
+  const idwPts = pts.map(p => ({ x: p.lon, y: p.lat, z: p.mois }));
+  const dlat = (latArr[1] - latArr[0]) / 2;
+  const dlon = (lonArr[1] - lonArr[0]) / 2;
+
+  const features = [];
+  for (let i = 0; i < res; i++) {
+    for (let j = 0; j < res; j++) {
+      const clat = latArr[i], clon = lonArr[j];
+      const val = Math.max(vmin, Math.min(vmax, idw(idwPts, clon, clat)));
+      features.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [clon - dlon, clat - dlat],
+            [clon + dlon, clat - dlat],
+            [clon + dlon, clat + dlat],
+            [clon - dlon, clat + dlat],
+            [clon - dlon, clat - dlat],
+          ]]
+        },
+        properties: { val, color: rampColor(val, vmin, vmax) }
+      });
+    }
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+// ── Map state ─────────────────────────────────────────────────────────────
+let map = null;
+let heatLayer = null, markerLayer = null;
+
+function initMap(center) {
+  if (map) return;
+  map = L.map('hydra-map', { center, zoom: 17 });
+
+  L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    attribution: 'Google Satellite', maxZoom: 21, name: '🛰️ Satellite'
+  }).addTo(map);
+}
+
+function renderMap(rows) {
+  const statusBar = document.getElementById('status-bar');
+  statusBar.textContent = '⏳ Interpolating grid…';
+
+  // Slight defer so the UI can update
+  setTimeout(() => {
+    // Filter & clean
+    const pts = rows
+      .map(r => ({
+        lat:  parseFloat(r['Latitude']),
+        lon:  parseFloat(r['Longitude']),
+        mois: parseFloat(r['Soil Moisture (%)']),
+        temp: parseFloat(r['Soil Temperature (C)']),
+        ec:   parseFloat(r['Bulk EC(TC) (dS/m)']),
+        ts:   r['Timestamp'] || '',
+      }))
+      .filter(p => !isNaN(p.lat) && !isNaN(p.lon) && !isNaN(p.mois) && p.mois > 0.5);
+
+    if (pts.length === 0) {
+      statusBar.textContent = '⚠️ No valid readings found. Check column names in the CSV.';
+      return;
+    }
+
+    const moistures = pts.map(p => p.mois);
+    const vmin = Math.max(0,   Math.min(...moistures) - 1);
+    const vmax = Math.min(100, Math.max(...moistures) + 1);
+    const center = [
+      pts.reduce((s,p) => s + p.lat, 0) / pts.length,
+      pts.reduce((s,p) => s + p.lon, 0) / pts.length,
+    ];
+
+    // Show map
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('map-wrap').style.display = 'block';
+    initMap(center);
+
+    // Remove old layers
+    if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+    if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
+
+    // Build grid GeoJSON
+    const geojson = buildGrid(pts, vmin, vmax);
+
+    heatLayer = L.geoJSON(geojson, {
+      style: f => ({
+        fillColor: f.properties.color,
+        color: 'none',
+        weight: 0,
+        fillOpacity: 0.62,
+      }),
+      onEachFeature: (f, layer) => {
+        layer.bindTooltip(`Moisture: ${f.properties.val.toFixed(1)}%`);
+      }
+    }).addTo(map);
+
+    // Per-point markers (averaged at same lat/lon)
+    const byKey = {};
+    for (const p of pts) {
+      const key = `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+      if (!byKey[key]) byKey[key] = { lat: p.lat, lon: p.lon, mois: [], temp: [], ec: [], ts: p.ts };
+      byKey[key].mois.push(p.mois);
+      if (!isNaN(p.temp)) byKey[key].temp.push(p.temp);
+      if (!isNaN(p.ec))   byKey[key].ec.push(p.ec);
+    }
+
+    const mean = arr => arr.length ? arr.reduce((s,v) => s+v, 0) / arr.length : NaN;
+
+    markerLayer = L.featureGroup();
+    for (const agg of Object.values(byKey)) {
+      const avgM = mean(agg.mois);
+      const avgT = mean(agg.temp);
+      const avgE = mean(agg.ec);
+      const color = rampColor(avgM, vmin, vmax);
+      const popup = `
+        <div style="font-family:Inter,sans-serif;font-size:13px;min-width:190px">
+          <b style="font-size:15px">📍 Sample Point</b><hr style="margin:4px 0">
+          <b>Avg Moisture:</b> ${avgM.toFixed(1)}%<br>
+          <b>Range:</b> ${Math.min(...agg.mois).toFixed(1)}% – ${Math.max(...agg.mois).toFixed(1)}%<br>
+          <b>Avg Temp:</b> ${isNaN(avgT) ? 'N/A' : avgT.toFixed(1) + ' °C'}<br>
+          <b>Avg Bulk EC:</b> ${isNaN(avgE) ? 'N/A' : avgE.toFixed(3) + ' dS/m'}<br>
+          <b>Readings:</b> ${agg.mois.length}<br>
+          <small style="color:#888">${agg.lat.toFixed(6)}, ${agg.lon.toFixed(6)}</small>
+        </div>`;
+      L.circleMarker([agg.lat, agg.lon], {
+        radius: 6, color: 'white', weight: 1.5,
+        fillColor: color, fillOpacity: 0.95, fill: true,
+      })
+        .bindPopup(popup, { maxWidth: 240 })
+        .bindTooltip(`Moisture: ${avgM.toFixed(1)}%`)
+        .addTo(markerLayer);
+    }
+    markerLayer.addTo(map);
+
+    // Fit bounds
+    map.fitBounds(markerLayer.getBounds().pad(0.1));
+
+    // Stats panel
+    const allMois = pts.map(p => p.mois);
+    const allTemp = pts.map(p => p.temp).filter(v => !isNaN(v));
+    const allEc   = pts.map(p => p.ec).filter(v => !isNaN(v));
+    const statsTable = document.getElementById('stats-table');
+    statsTable.innerHTML = `
+      <tr><td>Avg Moisture</td><td>${mean(allMois).toFixed(1)}%</td></tr>
+      <tr><td>Min / Max</td><td>${Math.min(...allMois).toFixed(1)}% / ${Math.max(...allMois).toFixed(1)}%</td></tr>
+      <tr><td style="color:#ffcc80">Avg Temp</td><td>${allTemp.length ? mean(allTemp).toFixed(1)+' °C' : 'N/A'}</td></tr>
+      <tr><td style="color:#a5d6a7">Avg Bulk EC</td><td>${allEc.length ? mean(allEc).toFixed(3)+' dS/m' : 'N/A'}</td></tr>
+      <tr><td style="color:#ce93d8">Sample Points</td><td>${Object.keys(byKey).length}</td></tr>
+      <tr><td style="color:#ce93d8">Total Readings</td><td>${pts.length}</td></tr>
+    `;
+    document.getElementById('stats-ts').textContent = `HydraGO · ${new Date().toISOString().slice(0,10)}`;
+
+    // Legend range
+    document.getElementById('leg-min').textContent = vmin.toFixed(1) + '%';
+    document.getElementById('leg-max').textContent = vmax.toFixed(1) + '%';
+
+    statusBar.textContent = `✅ Loaded ${pts.length} readings across ${Object.keys(byKey).length} sample points.`;
+  }, 50);
+}
+
+// ── File input / drag & drop ──────────────────────────────────────────────
+function handleFile(file) {
+  if (!file || !file.name.endsWith('.csv')) {
+    document.getElementById('status-bar').style.display = 'block';
+    document.getElementById('status-bar').textContent = '⚠️ Please select a .csv file.';
+    return;
+  }
+  document.getElementById('file-name-label').textContent = file.name;
+  document.getElementById('status-bar').style.display = 'block';
+  document.getElementById('status-bar').textContent = '⏳ Parsing CSV…';
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: h => h.trim(),
+    complete: result => renderMap(result.data),
+    error: err => {
+      document.getElementById('status-bar').textContent = '❌ Error parsing CSV: ' + err.message;
+    }
+  });
+}
+
+document.getElementById('csv-input').addEventListener('change', e => {
+  handleFile(e.target.files[0]);
+});
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>
