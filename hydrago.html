@@ -633,6 +633,12 @@
                 maxZoom: 22
             });
 
+            const miStateAerial = L.tileLayer('https://imagery.michigan.gov/server/rest/services/Michigan_imagery_public/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'State of Michigan GIS (MiSAIL)',
+                maxNativeZoom: 19,
+                maxZoom: 22
+            });
+
             const streetTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: 'OpenStreetMap contributors',
                 maxZoom: 19
@@ -642,7 +648,8 @@
             esriSatellite.addTo(mapInstance);
 
             const baseLayers = {
-                "Recent Satellite (2026)": esriSatellite,
+                "Recent Satellite (Esri 2026)": esriSatellite,
+                "Michigan State Aerial (MiSAIL)": miStateAerial,
                 "Google Satellite": googleSatellite,
                 "Google Hybrid": googleHybrid,
                 "Street Map": streetTile
