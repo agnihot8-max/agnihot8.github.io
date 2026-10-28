@@ -325,11 +325,15 @@
                 <h2>HydraGO Field Data Upload</h2>
                 <div class="preset-buttons">
                     <button type="button" class="btn-preset" id="btn-sample-data">Load Sample Data</button>
+                    <button type="button" class="btn-preset" id="btn-drone-trigger">Overlay Drone Image</button>
                     <button type="button" class="btn-preset" id="btn-undo-delete" style="display: none;">Undo Delete (0)</button>
                     <button type="button" class="btn-preset" id="btn-restore-all" style="display: none;">Restore All Points</button>
                     <button type="button" class="btn-preset" id="btn-clear-data">Reset</button>
                 </div>
             </div>
+
+            <!-- Hidden file inputs -->
+            <input type="file" id="drone-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
 
             <div class="upload-dropzone" id="drop-zone">
                 <input type="file" id="csv-file-input" accept=".csv">
@@ -344,7 +348,7 @@
             <div id="upload-status" class="download-status"></div>
 
             <p class="download-note">
-                <strong>Data Processing:</strong> Files are parsed locally in your browser. Expected CSV headers include <code>Latitude</code>, <code>Longitude</code>, <code>Soil Moisture (%)</code>, <code>Soil Temperature (C)</code>, and <code>Bulk EC(TC) (dS/m)</code>. You can click on any point on the map to delete it and recalculate the soil moisture map.
+                <strong>Data Processing:</strong> Files are parsed locally in your browser. Expected CSV headers include <code>Latitude</code>, <code>Longitude</code>, <code>Soil Moisture (%)</code>, <code>Soil Temperature (C)</code>, and <code>Bulk EC(TC) (dS/m)</code>. You can click on any point on the map to delete it and recalculate the soil moisture map, or click <em>Overlay Drone Image</em> to import a custom UAV orthomosaic survey.
             </p>
         </section>
 
@@ -401,6 +405,20 @@
                 </div>
                 <div class="grid-toolbar-right">
                     Current Grid: <strong id="grid-summary-display">0.5 m</strong>
+                </div>
+            </div>
+
+            <!-- Custom Drone Overlay Toolbar (active when drone image is loaded) -->
+            <div class="grid-toolbar" id="drone-toolbar" style="display: none; background: #f0fdf4; border-color: #bbf7d0;">
+                <div class="grid-toolbar-left">
+                    <strong style="color: #166534; font-size: 0.85rem;">Drone Aerial Survey:</strong>
+                    <span id="drone-filename-tag" style="font-size: 0.85rem; color: #15803d; font-weight: bold;">--</span>
+                    <span style="font-size: 0.8rem; color: #166534; margin-left: 0.5rem;">Opacity:</span>
+                    <input type="range" id="drone-opacity-slider" min="0.1" max="1.0" step="0.05" value="0.85" style="vertical-align: middle;">
+                    <span id="drone-opacity-val" style="font-size: 0.8rem; font-weight: bold; color: #166534;">85%</span>
+                </div>
+                <div class="grid-toolbar-right">
+                    <button type="button" class="btn-preset" id="btn-remove-drone" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-color: #f87171; color: #dc2626;">Remove Drone Layer</button>
                 </div>
             </div>
 
@@ -604,8 +622,11 @@
         let mapInstance = null;
         let imageOverlayLayer = null;
         let pointsMarkerLayer = null;
+        let droneOverlayLayer = null; // Custom uploaded drone image layer
         let layerControl = null;
         let currentSourceLabel = 'HydraGO CSV';
+        let customDroneDataUrl = null;
+        let customDroneBounds = null;
 
         function initializeMap(centerLat, centerLon) {
             if (mapInstance) return;
@@ -616,40 +637,52 @@
                 maxZoom: 22
             });
 
-            // High-resolution, recently updated satellite imagery (May 2026 34cm orthoimagery)
+            // 1. High-Resolution Esri World Imagery (May 2026 34cm orthoimagery)
             const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics (2026)',
                 maxNativeZoom: 19,
                 maxZoom: 22
             });
 
-            const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                attribution: 'Google Satellite',
-                maxZoom: 22
-            });
-
-            const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                attribution: 'Google Hybrid',
-                maxZoom: 22
-            });
-
+            // 2. Michigan Statewide Authoritative Imagery & LiDAR (MiSAIL)
             const miStateAerial = L.tileLayer('https://imagery.michigan.gov/server/rest/services/Michigan_imagery_public/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'State of Michigan GIS (MiSAIL)',
                 maxNativeZoom: 19,
                 maxZoom: 22
             });
 
+            // 3. Copernicus Sentinel-2 Cloudless (frequent satellite updates)
+            const sentinel2 = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg', {
+                attribution: 'Sentinel-2 cloudless &copy; EOX IT Services GmbH (Contains modified Copernicus Sentinel data)',
+                maxNativeZoom: 16,
+                maxZoom: 22
+            });
+
+            // 4. Google Satellite
+            const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: 'Google Satellite',
+                maxZoom: 22
+            });
+
+            // 5. Google Hybrid (satellite + updated road labels)
+            const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                attribution: 'Google Hybrid',
+                maxZoom: 22
+            });
+
+            // 6. OpenStreetMap Vector
             const streetTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: 'OpenStreetMap contributors',
                 maxZoom: 19
             });
 
-            // Use the updated satellite imagery by default
+            // Set the high-resolution Esri 2026 basemap as default
             esriSatellite.addTo(mapInstance);
 
             const baseLayers = {
                 "Recent Satellite (Esri 2026)": esriSatellite,
                 "Michigan State Aerial (MiSAIL)": miStateAerial,
+                "Sentinel-2 (Copernicus 10m)": sentinel2,
                 "Google Satellite": googleSatellite,
                 "Google Hybrid": googleHybrid,
                 "Street Map": streetTile
@@ -735,6 +768,11 @@
                 mapInstance.removeLayer(pointsMarkerLayer);
                 if (layerControl) layerControl.removeLayer(pointsMarkerLayer);
                 pointsMarkerLayer = null;
+            }
+
+            // If a drone image is loaded, ensure it is on the map
+            if (customDroneDataUrl && !droneOverlayLayer) {
+                attachDroneOverlay();
             }
 
             // Generate parametric raster grid overlay at currentGridSize
@@ -826,6 +864,89 @@
             // Update Undo & Restore button states
             updateActionButtons();
             syncGridControlButtons();
+        }
+
+        // ── Custom Drone Aerial Image Overlay Handler
+        function attachDroneOverlay() {
+            if (!customDroneDataUrl || !mapInstance) return;
+
+            let bounds = customDroneBounds;
+            if (!bounds && activeReadings.length > 0) {
+                const lats = activeReadings.map(p => p.lat);
+                const lons = activeReadings.map(p => p.lon);
+                const pad = 0.00035;
+                bounds = [
+                    [Math.min(...lats) - pad, Math.min(...lons) - pad],
+                    [Math.max(...lats) + pad, Math.max(...lons) + pad]
+                ];
+                customDroneBounds = bounds;
+            } else if (!bounds) {
+                bounds = [
+                    [42.2963, -83.6672],
+                    [42.2973, -83.6663]
+                ];
+                customDroneBounds = bounds;
+            }
+
+            if (droneOverlayLayer) {
+                mapInstance.removeLayer(droneOverlayLayer);
+                if (layerControl) layerControl.removeLayer(droneOverlayLayer);
+            }
+
+            const initialOpacity = parseFloat(document.getElementById('drone-opacity-slider').value) || 0.85;
+
+            droneOverlayLayer = L.imageOverlay(customDroneDataUrl, bounds, {
+                opacity: initialOpacity,
+                interactive: false
+            }).addTo(mapInstance);
+
+            // Bring drone overlay beneath soil moisture map layer
+            if (imageOverlayLayer) {
+                droneOverlayLayer.bringToBack();
+            }
+
+            if (layerControl) {
+                layerControl.addOverlay(droneOverlayLayer, "Drone Aerial Survey");
+            }
+
+            document.getElementById('drone-toolbar').style.display = 'flex';
+        }
+
+        function handleDroneFile(file) {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                customDroneDataUrl = e.target.result;
+                document.getElementById('drone-filename-tag').textContent = file.name;
+
+                // Ensure map is visible
+                document.getElementById('map-empty-placeholder').style.display = 'none';
+                document.getElementById('map-wrapper').style.display = 'block';
+
+                if (!mapInstance) {
+                    initializeMap(42.2968, -83.6666);
+                }
+
+                attachDroneOverlay();
+                mapInstance.fitBounds(customDroneBounds);
+
+                setStatus(`Drone aerial survey loaded (${file.name}). Use the opacity slider to adjust visibility.`, 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeDroneLayer() {
+            if (droneOverlayLayer && mapInstance) {
+                mapInstance.removeLayer(droneOverlayLayer);
+                if (layerControl) layerControl.removeLayer(droneOverlayLayer);
+                droneOverlayLayer = null;
+            }
+            customDroneDataUrl = null;
+            customDroneBounds = null;
+            document.getElementById('drone-toolbar').style.display = 'none';
+            document.getElementById('drone-file-input').value = '';
+            setStatus('Drone aerial survey layer removed.', 'info');
         }
 
         // ── Regrid Action Handler
@@ -1042,6 +1163,7 @@
 
             document.getElementById('stats-grid').style.display = 'none';
             document.getElementById('grid-toolbar').style.display = 'none';
+            document.getElementById('drone-toolbar').style.display = 'none';
             document.getElementById('map-wrapper').style.display = 'none';
             document.getElementById('map-empty-placeholder').style.display = 'flex';
             document.getElementById('file-name-display').textContent = 'No file currently loaded';
@@ -1057,6 +1179,13 @@
                 if (layerControl) layerControl.removeLayer(pointsMarkerLayer);
                 pointsMarkerLayer = null;
             }
+            if (droneOverlayLayer && mapInstance) {
+                mapInstance.removeLayer(droneOverlayLayer);
+                if (layerControl) layerControl.removeLayer(droneOverlayLayer);
+                droneOverlayLayer = null;
+            }
+            customDroneDataUrl = null;
+            customDroneBounds = null;
 
             updateActionButtons();
             hideStatus();
@@ -1072,6 +1201,11 @@
         const restoreBtn = document.getElementById('btn-restore-all');
         const applyCustomGridBtn = document.getElementById('btn-apply-custom-grid');
         const customGridInput = document.getElementById('custom-grid-input');
+        const droneTriggerBtn = document.getElementById('btn-drone-trigger');
+        const droneFileInput = document.getElementById('drone-file-input');
+        const droneOpacitySlider = document.getElementById('drone-opacity-slider');
+        const droneOpacityVal = document.getElementById('drone-opacity-val');
+        const removeDroneBtn = document.getElementById('btn-remove-drone');
 
         browseBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1127,6 +1261,27 @@
                 setGridSize(customGridInput.value);
             }
         });
+
+        // Drone Overlay listeners
+        droneTriggerBtn.addEventListener('click', function() {
+            droneFileInput.click();
+        });
+
+        droneFileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                handleDroneFile(e.target.files[0]);
+            }
+        });
+
+        droneOpacitySlider.addEventListener('input', function() {
+            const val = parseFloat(this.value);
+            droneOpacityVal.textContent = Math.round(val * 100) + '%';
+            if (droneOverlayLayer) {
+                droneOverlayLayer.setOpacity(val);
+            }
+        });
+
+        removeDroneBtn.addEventListener('click', removeDroneLayer);
     </script>
 </body>
 </html>
