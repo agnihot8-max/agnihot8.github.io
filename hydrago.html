@@ -616,8 +616,20 @@
                 maxZoom: 22
             });
 
-            const satelliteTile = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            // High-resolution, recently updated satellite imagery (May 2026 34cm orthoimagery)
+            const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics (2026)',
+                maxNativeZoom: 19,
+                maxZoom: 22
+            });
+
+            const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                 attribution: 'Google Satellite',
+                maxZoom: 22
+            });
+
+            const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                attribution: 'Google Hybrid',
                 maxZoom: 22
             });
 
@@ -626,11 +638,14 @@
                 maxZoom: 19
             });
 
-            satelliteTile.addTo(mapInstance);
+            // Use the updated satellite imagery by default
+            esriSatellite.addTo(mapInstance);
 
             const baseLayers = {
-                "Satellite View": satelliteTile,
-                "Street View": streetTile
+                "Recent Satellite (2026)": esriSatellite,
+                "Google Satellite": googleSatellite,
+                "Google Hybrid": googleHybrid,
+                "Street Map": streetTile
             };
 
             layerControl = L.control.layers(baseLayers, null, { position: 'topright' }).addTo(mapInstance);
