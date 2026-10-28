@@ -1,4 +1,4 @@
-﻿/**
+/**
  * LGRx Soil Moisture Network — CSV Data Download Module
  * University of Michigan | CYGNSS Ground Validation Network
  */
@@ -10,10 +10,10 @@
 // ==========================================================================
 const CONFIG = {
     NODE_INFO: {
-        "1": { channel: "2996904", readKey: "REPLACE_WITH_KEY1" },
-        "2": { channel: "2996908", readKey: "REPLACE_WITH_KEY2" },
-        "3": { channel: "2996910", readKey: "REPLACE_WITH_KEY3" },
-        "4": { channel: "2996911", readKey: "REPLACE_WITH_KEY4" }
+        "1": { channel: "3378519", readKey: "REPLACE_WITH_KEY1" },
+        "2": { channel: "3378531", readKey: "REPLACE_WITH_KEY2" },
+        "3": { channel: "3378533", readKey: "REPLACE_WITH_KEY3" },
+        "4": { channel: "3378534", readKey: "REPLACE_WITH_KEY4" }
     }
 };
 
