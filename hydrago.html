@@ -495,7 +495,7 @@
             return [last[0], last[1], last[2]];
         }
 
-        // ── Parametric Rasterized Grid Generation (supports any grid size in meters)
+        // ── Ultra-fast Forward-Splatting Rasterized Grid Generation (Never freezes, zero allocation loop)
         function generateGridCanvas(points, vmin, vmax, cellSizeMeters = 0.5, maxDistanceMeters = 5.5) {
             if (!points || points.length === 0) return null;
 
@@ -521,28 +521,59 @@
             const totalHeightM = (gridLatMax - gridLatMin) * mPerLat;
             const totalWidthM = (gridLonMax - gridLonMin) * mPerLon;
 
-            const cols = Math.max(2, Math.round(totalWidthM / cellSizeMeters));
-            const rows = Math.max(2, Math.round(totalHeightM / cellSizeMeters));
-
-            // Convert points to local meter coordinates
-            const pts = points.map(p => ({
-                x: (p.lon - gridLonMin) * mPerLon,
-                y: (p.lat - gridLatMin) * mPerLat,
-                val: p.moisture
-            }));
-
-            // Spatial bucketing for fast neighborhood lookup
-            const bucketSize = Math.max(6.0, cellSizeMeters * 2);
-            const buckets = {};
-            for (let i = 0; i < pts.length; i++) {
-                const p = pts[i];
-                const bx = Math.floor(p.x / bucketSize);
-                const by = Math.floor(p.y / bucketSize);
-                const key = bx + ',' + by;
-                if (!buckets[key]) buckets[key] = [];
-                buckets[key].push(p);
+            // Safe guard against runaway grid sizes on massive bounding boxes
+            let effectiveCell = Math.max(0.15, cellSizeMeters);
+            const estimatedCells = (totalWidthM / effectiveCell) * (totalHeightM / effectiveCell);
+            if (estimatedCells > 2000000) {
+                effectiveCell = Math.sqrt((totalWidthM * totalHeightM) / 2000000);
             }
 
+            const cols = Math.max(2, Math.round(totalWidthM / effectiveCell));
+            const rows = Math.max(2, Math.round(totalHeightM / effectiveCell));
+
+            // Float32 typed arrays for blazing speed and zero memory allocation overhead
+            const totalCells = cols * rows;
+            const weights = new Float32Array(totalCells);
+            const values = new Float32Array(totalCells);
+
+            const rCells = Math.ceil(maxDistanceMeters / effectiveCell);
+            const maxDist2 = maxDistanceMeters * maxDistanceMeters;
+
+            // Forward-splatting: only visit cells in proximity to actual measurement points
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const px = (p.lon - gridLonMin) * mPerLon;
+                const py = (p.lat - gridLatMin) * mPerLat;
+                const pval = p.moisture;
+
+                const cp = Math.round(px / effectiveCell);
+                const rp = Math.round(py / effectiveCell);
+
+                const r0 = Math.max(0, rp - rCells);
+                const r1 = Math.min(rows - 1, rp + rCells);
+                const c0 = Math.max(0, cp - rCells);
+                const c1 = Math.min(cols - 1, cp + rCells);
+
+                for (let r = r0; r <= r1; r++) {
+                    const dy = (r * effectiveCell) - py;
+                    const dy2 = dy * dy;
+                    const rowOffset = r * cols;
+
+                    for (let c = c0; c <= c1; c++) {
+                        const dx = (c * effectiveCell) - px;
+                        const d2 = dx * dx + dy2;
+
+                        if (d2 <= maxDist2) {
+                            const w = 1.0 / (d2 + 0.01);
+                            const idx = rowOffset + c;
+                            weights[idx] += w;
+                            values[idx] += w * pval;
+                        }
+                    }
+                }
+            }
+
+            // Write results into HTML5 Canvas ImageData
             const canvas = document.createElement('canvas');
             canvas.width = cols;
             canvas.height = rows;
@@ -550,52 +581,23 @@
             const imgData = ctx.createImageData(cols, rows);
             const data = imgData.data;
 
-            const maxDist2 = maxDistanceMeters * maxDistanceMeters;
-
             for (let r = 0; r < rows; r++) {
-                const cyM = (r + 0.5) * cellSizeMeters;
-                const by = Math.floor(cyM / bucketSize);
-                const canvasY = (rows - 1) - r; // Flip Y for image coordinate system
+                const canvasY = (rows - 1) - r; // Flip Y for geographic image coordinates
+                const rowOffset = r * cols;
+                const canvasRowOffset = canvasY * cols;
 
                 for (let c = 0; c < cols; c++) {
-                    const cxM = (c + 0.5) * cellSizeMeters;
-                    const bx = Math.floor(cxM / bucketSize);
+                    const idx = rowOffset + c;
+                    const w = weights[idx];
 
-                    let minD2 = Infinity;
-                    let sumW = 0;
-                    let sumV = 0;
-
-                    for (let dbx = -1; dbx <= 1; dbx++) {
-                        for (let dby = -1; dby <= 1; dby++) {
-                            const bKey = (bx + dbx) + ',' + (by + dby);
-                            const bPts = buckets[bKey];
-                            if (!bPts) continue;
-
-                            for (let k = 0; k < bPts.length; k++) {
-                                const p = bPts[k];
-                                const dx = p.x - cxM;
-                                const dy = p.y - cyM;
-                                const d2 = dx * dx + dy * dy;
-                                if (d2 < minD2) minD2 = d2;
-
-                                const w = 1.0 / (d2 + 0.01);
-                                sumW += w;
-                                sumV += w * p.val;
-                            }
-                        }
-                    }
-
-                    const pixelIdx = (canvasY * cols + c) * 4;
-
-                    if (minD2 <= maxDist2 && sumW > 0) {
-                        const val = sumV / sumW;
+                    if (w > 0) {
+                        const val = values[idx] / w;
                         const rgb = getRgbForValue(val, vmin, vmax);
-                        data[pixelIdx]     = rgb[0];
-                        data[pixelIdx + 1] = rgb[1];
-                        data[pixelIdx + 2] = rgb[2];
-                        data[pixelIdx + 3] = 210; // ~82% opacity to reveal satellite base
-                    } else {
-                        data[pixelIdx + 3] = 0; // Transparent outside measured zone
+                        const pIdx = (canvasRowOffset + c) * 4;
+                        data[pIdx]     = rgb[0];
+                        data[pIdx + 1] = rgb[1];
+                        data[pIdx + 2] = rgb[2];
+                        data[pIdx + 3] = 210; // ~82% opacity
                     }
                 }
             }
@@ -610,7 +612,7 @@
                 ],
                 cols: cols,
                 rows: rows,
-                cellSize: cellSizeMeters
+                cellSize: effectiveCell
             };
         }
 
@@ -949,22 +951,25 @@
             setStatus('Drone aerial survey layer removed.', 'info');
         }
 
-        // ── Regrid Action Handler
+        // ── Regrid Action Handler (Asynchronous & Instant Response)
         function setGridSize(newSize) {
             const parsed = parseFloat(newSize);
-            if (isNaN(parsed) || parsed <= 0 || parsed > 50) {
+            if (isNaN(parsed) || parsed < 0.1 || parsed > 50) {
                 alert('Please enter a valid grid size between 0.1 and 50 meters.');
                 return;
             }
 
-            currentGridSize = Math.round(parsed * 100) / 100; // Round to 2 decimal places
+            currentGridSize = Math.round(parsed * 100) / 100;
             document.getElementById('custom-grid-input').value = currentGridSize;
 
             syncGridControlButtons();
 
             if (activeReadings.length > 0) {
-                renderSoilMoistureMap(activeReadings, false);
-                setStatus(`Regridded soil moisture map to ${currentGridSize} meter resolution.`, 'info');
+                setStatus(`Regridding soil moisture map to ${currentGridSize} m...`, 'info');
+                setTimeout(() => {
+                    renderSoilMoistureMap(activeReadings, false);
+                    setStatus(`Soil moisture map regridded to ${currentGridSize} meter resolution.`, 'info');
+                }, 20);
             }
         }
 
